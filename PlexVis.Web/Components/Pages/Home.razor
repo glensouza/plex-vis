@@ -1,7 +1,140 @@
 ﻿@page "/"
+@using PlexVis.Web.Models
+@using PlexVis.Web.Services
+@inject PlexDataService PlexData
 
-<PageTitle>Home</PageTitle>
+<PageTitle>PlexVis - Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="dashboard">
+    <div class="hero">
+        <h1>🎬 PlexVis</h1>
+        <p class="tagline">Your Plex Viewing Velocity Visualizer</p>
+    </div>
 
-Welcome to your new app.
+    @if (!PlexData.IsDatabaseConfigured)
+    {
+        <div class="setup-card">
+            <h2>⚙️ Setup Required</h2>
+            <p>Configure your Plex database path in <code>appsettings.json</code>:</p>
+            <pre><code>{
+  "Plex": {
+    "DatabasePath": "/path/to/com.plexapp.plugins.library.db",
+    "ServerUrl": "http://your-plex-server:32400",
+    "Token": "YOUR_PLEX_TOKEN"
+  }
+}</code></pre>
+        </div>
+    }
+    else
+    {
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🎬</div>
+                <div class="stat-value metric-value">@stats.TotalMovies</div>
+                <div class="stat-label">Movies</div>
+                <div class="stat-sub">@stats.WatchedMovies watched</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📺</div>
+                <div class="stat-value metric-value">@stats.TotalShows</div>
+                <div class="stat-label">TV Shows</div>
+                <div class="stat-sub">@stats.TotalEpisodes episodes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-value metric-value">@stats.WatchedEpisodes</div>
+                <div class="stat-label">Episodes Watched</div>
+                <div class="stat-sub">@GetWatchPercentage()% complete</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💾</div>
+                <div class="stat-value metric-value">@stats.TotalSizeGB.ToString("N0")</div>
+                <div class="stat-label">Total GB</div>
+                <div class="stat-sub">library size</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="panel">
+                <h2>⚡ On Deck (by Velocity)</h2>
+                @if (velocityItems.Any())
+                {
+                    <div class="velocity-list">
+                        @foreach (ShowVelocity item in velocityItems.Take(5))
+                        {
+                            <div class="velocity-card @item.CardClass">
+                                <div class="velocity-info">
+                                    <div class="show-title">@item.ShowTitle</div>
+                                    <div class="episode-info">S@item.SeasonNum E@item.EpisodeNum - @item.EpisodeTitle</div>
+                                </div>
+                                <div class="velocity-days metric-value">@item.AvgDaysToWatch.ToString("N1")d</div>
+                                <div class="velocity-badge @item.VelocityClass">
+                                    @item.VelocityLabel
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <a href="/velocity" class="view-all-link">View all →</a>
+                }
+                else
+                {
+                    <p class="no-data">No velocity data available yet. Watch some shows!</p>
+                }
+            </div>
+
+            <div class="panel">
+                <h2>📅 Recently Watched</h2>
+                @if (recentItems.Any())
+                {
+                    <div class="recent-list">
+                        @foreach (RecentlyWatched item in recentItems)
+                        {
+                            <div class="recent-item">
+                                <span class="type-icon">@item.TypeIcon</span>
+                                <div class="recent-info">
+                                    <div class="recent-title">@item.Title</div>
+                                    <div class="recent-meta">
+                                        @if (item.LastWatched.HasValue)
+                                        {
+                                            <span>@item.LastWatched.Value.ToString("MMM d, yyyy")</span>
+                                        }
+                                        @if (item.ViewCount > 1)
+                                        {
+                                            <span>• @item.ViewCount plays</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="no-data">No watch history found.</p>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private LibraryStats stats = new();
+    private IEnumerable<ShowVelocity> velocityItems = [];
+    private IEnumerable<RecentlyWatched> recentItems = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PlexData.IsDatabaseConfigured)
+        {
+            stats = await PlexData.GetLibraryStatsAsync();
+            velocityItems = await PlexData.GetViewingVelocityAsync();
+            recentItems = await PlexData.GetRecentlyWatchedAsync(8);
+        }
+    }
+
+    private string GetWatchPercentage()
+    {
+        if (stats.TotalEpisodes == 0) return "0";
+        return ((double)stats.WatchedEpisodes / stats.TotalEpisodes * 100).ToString("N1");
+    }
+}

@@ -1,0 +1,133 @@
+@page "/library"
+@using PlexVis.Web.Models
+@using PlexVis.Web.Services
+@inject PlexDataService PlexData
+
+<PageTitle>PlexVis - Library Statistics</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1>📊 Library Statistics</h1>
+        <p>Overview of your Plex media library.</p>
+    </div>
+
+    @if (!PlexData.IsDatabaseConfigured)
+    {
+        <div class="setup-card">
+            <h2>⚙️ Setup Required</h2>
+            <p>Please configure your Plex database to see library statistics.</p>
+            <a href="/" class="btn-primary">Go to Dashboard</a>
+        </div>
+    }
+    else
+    {
+        <div class="library-stats">
+            <div class="stats-section">
+                <h2>🎬 Movies</h2>
+                <div class="stat-row">
+                    <div class="stat-block">
+                        <div class="stat-number">@stats.TotalMovies</div>
+                        <div class="stat-name">Total Movies</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-number">@stats.WatchedMovies</div>
+                        <div class="stat-name">Watched</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-number">@(stats.TotalMovies - stats.WatchedMovies)</div>
+                        <div class="stat-name">Unwatched</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: @GetMovieWatchPercentage()%"></div>
+                </div>
+                <div class="progress-label">@GetMovieWatchPercentage().ToString("N1")% watched</div>
+            </div>
+
+            <div class="stats-section">
+                <h2>📺 TV Shows</h2>
+                <div class="stat-row">
+                    <div class="stat-block">
+                        <div class="stat-number">@stats.TotalShows</div>
+                        <div class="stat-name">Total Shows</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-number">@stats.TotalEpisodes</div>
+                        <div class="stat-name">Total Episodes</div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-number">@stats.WatchedEpisodes</div>
+                        <div class="stat-name">Episodes Watched</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: @GetEpisodeWatchPercentage()%"></div>
+                </div>
+                <div class="progress-label">@GetEpisodeWatchPercentage().ToString("N1")% episodes watched</div>
+            </div>
+
+            <div class="stats-section">
+                <h2>💾 Storage</h2>
+                <div class="storage-display">
+                    <div class="storage-value">@stats.TotalSizeGB.ToString("N2") GB</div>
+                    <div class="storage-label">Total Library Size</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="recent-section">
+            <h2>📅 Recently Watched</h2>
+            @if (recentItems.Any())
+            {
+                <div class="recent-grid">
+                    @foreach (RecentlyWatched item in recentItems)
+                    {
+                        <div class="recent-card">
+                            <div class="recent-card-icon">@item.TypeIcon</div>
+                            <div class="recent-card-content">
+                                <div class="recent-card-title">@item.Title</div>
+                                <div class="recent-card-meta">
+                                    <span class="type-badge">@item.TypeLabel</span>
+                                    @if (item.LastWatched.HasValue)
+                                    {
+                                        <span>@item.LastWatched.Value.ToString("MMM d, yyyy")</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="no-data">No recent watch history found.</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private LibraryStats stats = new();
+    private IEnumerable<RecentlyWatched> recentItems = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PlexData.IsDatabaseConfigured)
+        {
+            stats = await PlexData.GetLibraryStatsAsync();
+            recentItems = await PlexData.GetRecentlyWatchedAsync(12);
+        }
+    }
+
+    private double GetMovieWatchPercentage()
+    {
+        if (stats.TotalMovies == 0) return 0;
+        return (double)stats.WatchedMovies / stats.TotalMovies * 100;
+    }
+
+    private double GetEpisodeWatchPercentage()
+    {
+        if (stats.TotalEpisodes == 0) return 0;
+        return (double)stats.WatchedEpisodes / stats.TotalEpisodes * 100;
+    }
+}

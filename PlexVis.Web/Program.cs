@@ -1,10 +1,15 @@
-using PlexVis.Web;
 using PlexVis.Web.Components;
+using PlexVis.Web.Configuration;
+using PlexVis.Web.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
+
+// Add Plex configuration
+builder.Services.Configure<PlexSettings>(builder.Configuration.GetSection("Plex"));
+builder.Services.AddSingleton<PlexDataService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

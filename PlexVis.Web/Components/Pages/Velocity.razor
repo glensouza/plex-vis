@@ -1,0 +1,95 @@
+@page "/velocity"
+@using PlexVis.Web.Models
+@using PlexVis.Web.Services
+@inject PlexDataService PlexData
+
+<PageTitle>PlexVis - Viewing Velocity</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1>⚡ Viewing Velocity</h1>
+        <p>Shows ordered by how quickly you typically watch new episodes. Lower days = higher urgency.</p>
+    </div>
+
+    @if (!PlexData.IsDatabaseConfigured)
+    {
+        <div class="setup-card">
+            <h2>⚙️ Setup Required</h2>
+            <p>Please configure your Plex database to see velocity data.</p>
+            <a href="/" class="btn-primary">Go to Dashboard</a>
+        </div>
+    }
+    else if (velocityItems.Any())
+    {
+        <div class="velocity-table-container">
+            <table class="velocity-table">
+                <thead>
+                    <tr>
+                        <th>Show</th>
+                        <th>Next Episode</th>
+                        <th>Avg. Days</th>
+                        <th>Velocity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (ShowVelocity item in velocityItems)
+                    {
+                        <tr>
+                            <td class="show-cell">@item.ShowTitle</td>
+                            <td class="episode-cell">
+                                <span class="season-ep">S@item.SeasonNum E@item.EpisodeNum</span>
+                                <span class="ep-title">@item.EpisodeTitle</span>
+                            </td>
+                            <td class="days-cell metric-value">@item.AvgDaysToWatch.ToString("N1")</td>
+                            <td>
+                                <span class="velocity-badge @item.VelocityClass">@item.VelocityLabel</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="legend">
+            <h3>Understanding Velocity</h3>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <span class="velocity-badge badge-fast">⚡ Fast</span>
+                    <span>0-2 days after release</span>
+                </div>
+                <div class="legend-item">
+                    <span class="velocity-badge badge-steady">🐢 Steady</span>
+                    <span>3-7 days after release</span>
+                </div>
+                <div class="legend-item">
+                    <span class="velocity-badge badge-stale">🕸️ Stale</span>
+                    <span>8-30 days (Backlog building)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="velocity-badge badge-archived">💀 Archived</span>
+                    <span>30+ days (Deep backlog)</span>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📺</div>
+            <h2>No Velocity Data Yet</h2>
+            <p>Watch some TV episodes to start building your viewing velocity profile.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private IEnumerable<ShowVelocity> velocityItems = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PlexData.IsDatabaseConfigured)
+        {
+            velocityItems = await PlexData.GetViewingVelocityAsync();
+        }
+    }
+}
