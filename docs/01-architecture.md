@@ -52,4 +52,4 @@ The app will run as the same user as Plex does. This user already belongs to a g
 
 ---
 
-[← Back to README](../README.md) | [Next: Getting Started →](02-getting-started.md)
+[← Back to README](../.github/README.md) | [Next: Getting Started →](02-getting-started.md)

@@ -123,4 +123,4 @@ After pushing to `main`:
 
 ---
 
-[← Previous: Deployment](03-deployment.md) | [Back to README](../README.md) | [Next: SQL Reference →](05-sql-reference.md)
+[← Previous: Deployment](03-deployment.md) | [Back to README](../.github/README.md) | [Next: SQL Reference →](05-sql-reference.md)

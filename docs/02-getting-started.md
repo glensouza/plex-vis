@@ -76,4 +76,4 @@ dotnet run --project PlexVis.AppHost --urls "https://localhost:5002"
 
 ---
 
-[← Previous: Architecture](01-architecture.md) | [Back to README](../README.md) | [Next: Deployment →](03-deployment.md)
+[← Previous: Architecture](01-architecture.md) | [Back to README](../.github/README.md) | [Next: Deployment →](03-deployment.md)

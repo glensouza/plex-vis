@@ -140,4 +140,4 @@ curl http://127.0.0.1:5000
 
 ---
 
-[← Previous: Getting Started](02-getting-started.md) | [Back to README](../README.md) | [Next: CI/CD Setup →](04-cicd.md)
+[← Previous: Getting Started](02-getting-started.md) | [Back to README](../.github/README.md) | [Next: CI/CD Setup →](04-cicd.md)

@@ -241,4 +241,4 @@ SELECT * FROM metadata_items WHERE deleted_at IS NOT NULL;
 
 ---
 
-[← Previous: CI/CD Setup](04-cicd.md) | [Back to README](../README.md)
+[← Previous: CI/CD Setup](04-cicd.md) | [Back to README](../.github/README.md)
