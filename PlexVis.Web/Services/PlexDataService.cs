@@ -140,7 +140,7 @@ public class PlexDataService
             return [];
         }
 
-        string sql = $"""
+        const string sql = """
             SELECT 
                 m.title AS Title, 
                 s.view_count AS ViewCount, 
@@ -150,13 +150,13 @@ public class PlexDataService
             JOIN metadata_item_settings s ON m.guid = s.guid
             WHERE s.view_count > 0
             ORDER BY s.last_viewed_at DESC
-            LIMIT {limit};
+            LIMIT @Limit;
             """;
 
         try
         {
             using SqliteConnection connection = CreateConnection();
-            IEnumerable<RecentlyWatched> results = await connection.QueryAsync<RecentlyWatched>(sql);
+            IEnumerable<RecentlyWatched> results = await connection.QueryAsync<RecentlyWatched>(sql, new { Limit = limit });
             return results;
         }
         catch (Exception ex)
