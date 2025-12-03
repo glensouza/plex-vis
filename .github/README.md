@@ -51,6 +51,6 @@ Please read [CONTRIBUTING.md](../CONTRIBUTING.md) for details on our code of con
 
 For security concerns, please see [SECURITY.md](SECURITY.md).
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/glensouza/plex-vis?tab=MIT-1-ov-file) file for details.
