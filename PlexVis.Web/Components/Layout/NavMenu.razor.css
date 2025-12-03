@@ -30,6 +30,11 @@
     color: #E5A00D !important;
 }
 
+.brand-logo {
+    width: 28px;
+    height: 28px;
+}
+
 .brand-icon {
     font-size: 1.4rem;
 }
