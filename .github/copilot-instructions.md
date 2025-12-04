@@ -2,27 +2,22 @@
 
 ## Project Overview
 
-This repository contains the Pathfinder Photography Honor application for Pathfinders 2025. It's a .NET 9.0 Blazor Server application for managing photography submissions, voting, and grading with ELO ratings.
+This repository contains a .NET 10.0 Blazor Server application.
 
 **Key Technologies:**
-- .NET 9.0 / Blazor Server / C#
-- PostgreSQL 16
-- Google OAuth 2.0 authentication
-- OpenTelemetry & SigNoz observability
-- .NET Aspire for local development orchestration
+- .NET 10.0 / Blazor Server / C#
+- .NET Aspire for local development orchestration with OpenTelemetry
 
 ## Deployment Architecture
 
 **Development (Local):**
 - .NET Aspire (recommended - integrated observability)
 - Local .NET (direct development)
-- See [SETUP.md](../SETUP.md)
 
 **Production:**
 - Ubuntu 22.04 LTS (VM, bare metal, or cloud instance)
 - No Docker - native installation
 - Automated deployments via GitHub Actions (optional)
-- See [DEPLOY.md](../DEPLOY.md)
 
 ## Code of Conduct
 
@@ -66,13 +61,6 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ## Documentation
 
-**Important Files:**
-- `SETUP.md` - Local development setup (Aspire, local .NET)
-- `DEPLOY.md` - Production deployment guide (wizard-style with step-by-step files in deploy/ directory)
-- `deploy/*.md` - Individual deployment step files
-- `DEPLOYMENT_CHECKLIST.md` - Deployment verification checklist
-- `.github/workflows/deploy-bare-metal.yml` - Automated deployment workflow
-
 **Documentation Requirements:**
 - Update markdown files when changing functionality
 - Document new features with clear examples
@@ -84,7 +72,6 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 **Critical Requirements:**
 - Never commit sensitive information (API keys, passwords, personal data)
-- Use `openssl rand -base64 32` for generating secure passwords
 - Follow principle of least privilege (e.g., github-runner user NOT in sudo group)
 - Use restrictive file patterns in sudoers (e.g., `[0-9a-f]*` for SHA hashes, not `*`)
 - Set proper file permissions (600 for config files with secrets)
@@ -102,108 +89,20 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ### Application Architecture
 
-**User Roles:**
-- 0 = Pathfinder (default)
-- 1 = Instructor
-- 2 = Admin (first user auto-promoted)
-
-**Key Features:**
-- Photo submission with 10 composition rules
-- ELO rating system for photo comparison voting
-- Admin user management (promote, demote, delete with ELO recalculation)
-- PDF export functionality
-- Email notifications (optional)
-
-### Photography Content
-
-- Ensure all photography-related content is accurate and educational
-- Use appropriate photography terminology
-- Include practical examples and exercises where applicable
-- Make content accessible for beginners while providing depth for advanced learners
-
-### Educational Focus
-
-- Content should be appropriate for Pathfinder age group (typically 10-15 years old)
-- Use clear, age-appropriate language
-- Include visual examples where helpful
-- Provide step-by-step instructions for practical activities
-
-### Database Considerations
-
-- Always use Entity Framework migrations for schema changes
-- Test migrations both up and down
-- Consider data migration needs when changing models
-- ELO ratings are recalculated when users are deleted (important for integrity)
-
 ### Performance
 
 - Use async/await for I/O operations
-- Consider query performance with Entity Framework (use `.AsNoTracking()` for read-only)
-- Photo uploads limited to 10MB
-- Database queries should use proper indexes
-
-## Testing & Validation
-
-**Before Committing:**
-- Test locally with Aspire or local .NET
-- Run Entity Framework migrations if model changes
-- Verify Google OAuth still works
-- Check for obvious errors in browser console
-- Test photo upload functionality if related to changes
 
 **Documentation Changes:**
 - Verify all internal links work
 - Check markdown formatting
 - Ensure consistency with related docs
 
-## Deployment Paths
-
-**Local Development:**
-1. Aspire: `dotnet run --project PathfinderPhotography.AppHost` (automatic SigNoz)
-2. Local .NET: `dotnet run` (manual PostgreSQL setup)
-
-**Production Deployment:**
-1. Manual: Follow [DEPLOY.md](../DEPLOY.md) step-by-step
-2. Automated: Set up GitHub Actions runner on server (section 7 of deployment guide)
-   - Every push to `main` triggers automated deployment
-   - Includes backup, health checks, and automatic rollback
-
-## Common Tasks
-
-**Add a new EF migration:**
-```bash
-dotnet ef migrations add MeaningfulName
-dotnet ef database update
-```
-
-**Test production build locally:**
-```bash
-dotnet publish -c Release -o ./publish
-cd ./publish
-ASPNETCORE_ENVIRONMENT=Production dotnet PathfinderPhotography.dll
-```
-
-**View logs in production:**
-```bash
-sudo journalctl -u pathfinder-photography -f
-```
-
 ## Licensing
 
 - All contributions will be licensed under the MIT License
 - Ensure any third-party content or images used have appropriate permissions
 - Provide attribution for external resources
-
-## Questions and Support
-
-If you have questions or need help:
-- Check existing issues and discussions
-- Review [SETUP.md](../SETUP.md) for development setup
-- Review [DEPLOY.md](../DEPLOY.md) for production
-- Open an issue with your question
-- Reach out to the project maintainers
-
-Thank you for contributing to this educational project! 🎉
 
 ---
 
@@ -214,7 +113,7 @@ Purpose: provide explicit, actionable rules so Copilot produces consistent, well
 - Prefer Markdown native elements; avoid HTML unless necessary.
 - Use headings to show document structure. Start with a single H1 and use H2/H3 for sub-sections.
 - Keep paragraphs short (1-3 sentences). Use bulleted or numbered lists for steps and enumerations.
-- Use backticks for inline code, file names, directories, function names, classes, and commands (e.g., `SETUP.md`, `dotnet run`, `PathfinderPhotography.AppHost`).
+- Use backticks for inline code, file names, directories, function names, classes, and commands (e.g., `SETUP.md`, `dotnet run`).
 - Use fenced code blocks for commands and code examples. Specify language for syntax highlighting (e.g., ```bash, ```csharp).
 - When documenting commands, show the full command and a short explanation on the next line.
 - Provide examples and expected outputs for commands where helpful.
@@ -248,8 +147,7 @@ Title: How to run the app locally
 Short description: Run the Blazor Server app locally for development.
 
 Prerequisites:
-1. .NET 9 SDK installed
-2. PostgreSQL running and a `pathfinder` database created
+1. .NET 10 SDK installed
 
 Steps:
 1. Restore packages:
