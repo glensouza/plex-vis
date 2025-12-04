@@ -100,6 +100,11 @@ public partial class PlexDataService
             }
 
             _logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            if (!File.Exists(latestBackup))
+            {
+                _logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
+                return null;
+            }
             return latestBackup;
         }
         catch (Exception ex)
