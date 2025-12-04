@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-This repository contains the Pathfinder Photography Honor application for Pathfinders 2025. It's a .NET 9.0 Blazor Server application for managing photography submissions, voting, and grading with ELO ratings.
+This repository contains the Pathfinder Photography Honor application for Pathfinders 2025. It's a .NET 10.0 Blazor Server application for managing photography submissions, voting, and grading with ELO ratings.
 
 **Key Technologies:**
-- .NET 9.0 / Blazor Server / C#
+- .NET 10.0 / Blazor Server / C#
 - PostgreSQL 16
 - Google OAuth 2.0 authentication
 - OpenTelemetry & SigNoz observability
@@ -16,13 +16,13 @@ This repository contains the Pathfinder Photography Honor application for Pathfi
 **Development (Local):**
 - .NET Aspire (recommended - integrated observability)
 - Local .NET (direct development)
-- See [SETUP.md](../SETUP.md)
+- See `SETUP.md` for details
 
 **Production:**
 - Ubuntu 22.04 LTS (VM, bare metal, or cloud instance)
 - No Docker - native installation
 - Automated deployments via GitHub Actions (optional)
-- See [DEPLOY.md](../DEPLOY.md)
+- See `DEPLOY.md` for details
 
 ## Code of Conduct
 
@@ -49,26 +49,35 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ## Code Style
 
-**C# Specific:**
-- **Always use explicit types; never use `var`** - This is a hard requirement
-- Follow .NET naming conventions (PascalCase for public members, camelCase for private)
-- Use async/await properly - don't block on async code
-- Dispose IDisposable objects properly (using statements)
-- Keep methods focused and single-purpose
+**C# Specific (project hard rules):**
+- **Always use explicit types; never use `var`.** This is a hard requirement.
+- **Always declare explicit accessibility modifiers** on types and members (e.g., `public`, `internal`, `private`).
+- **Async methods must end with the `Async` suffix.**
+- Prefer **file-scoped namespaces** for new files.
+- Prefer **using declarations** (`using var stream = ...;`) or `using` statements to ensure proper disposal of `IDisposable` objects.
+- **Order using directives**: `System.*`, `Microsoft.*`, third-party, then project namespaces. Remove unused usings.
+- **Private fields** should use underscore-prefixed camelCase (e.g., `_logger`).
+- **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
+- **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
+- Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
+- Keep methods focused and single-purpose. Favor small, testable methods.
+- Dispose `IDisposable` objects properly. Prefer `using`/`using var` or implement `IAsyncDisposable` when appropriate.
+- Avoid blocking on async code. Use `async`/`await` throughout; do not call `.Result` or `.GetAwaiter().GetResult()` on tasks.
+- Follow .editorconfig rules strictly for formatting (indentation, spacing, naming, line length).
 
 **General:**
-- Write clear, readable code with meaningful variable and function names
-- Comment complex logic, not obvious code
-- Follow existing code patterns and conventions in the project
-- Keep functions small and focused on a single task
-- Write self-documenting code where possible
-- Use LINQ for collections where appropriate
+- Write clear, readable code with meaningful variable and function names.
+- Comment complex logic, not obvious code.
+- Follow existing code patterns and conventions in the project.
+- Keep functions small and focused on a single task.
+- Write self-documenting code where possible.
+- Use LINQ for collections where appropriate.
 
 ## Documentation
 
 **Important Files:**
 - `SETUP.md` - Local development setup (Aspire, local .NET)
-- `DEPLOY.md` - Production deployment guide (wizard-style with step-by-step files in deploy/ directory)
+- `DEPLOY.md` - Production deployment guide
 - `deploy/*.md` - Individual deployment step files
 - `DEPLOYMENT_CHECKLIST.md` - Deployment verification checklist
 - `.github/workflows/deploy-bare-metal.yml` - Automated deployment workflow
@@ -163,7 +172,7 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 2. Local .NET: `dotnet run` (manual PostgreSQL setup)
 
 **Production Deployment:**
-1. Manual: Follow [DEPLOY.md](../DEPLOY.md) step-by-step
+1. Manual: Follow `DEPLOY.md` step-by-step
 2. Automated: Set up GitHub Actions runner on server (section 7 of deployment guide)
    - Every push to `main` triggers automated deployment
    - Includes backup, health checks, and automatic rollback
@@ -198,8 +207,8 @@ sudo journalctl -u pathfinder-photography -f
 
 If you have questions or need help:
 - Check existing issues and discussions
-- Review [SETUP.md](../SETUP.md) for development setup
-- Review [DEPLOY.md](../DEPLOY.md) for production
+- Review `SETUP.md` for development setup
+- Review `DEPLOY.md` for production
 - Open an issue with your question
 - Reach out to the project maintainers
 
@@ -231,7 +240,7 @@ Purpose: provide explicit, actionable rules so Copilot produces consistent, well
 - Use emojis sparingly and only when they add clarity (e.g., checklists).
 - When adding or updating docs, update the `DEPLOYMENT_CHECKLIST.md` or related index files if applicable.
 
-Checklist for generated docs (use this as a final-pass template):
+Checklist for generated docs ( use this as a final-pass template):
 1. Title and short description (one sentence)
 2. Audience and prerequisites
 3. Step-by-step instructions with code blocks and examples
@@ -248,8 +257,7 @@ Title: How to run the app locally
 Short description: Run the Blazor Server app locally for development.
 
 Prerequisites:
-1. .NET 9 SDK installed
-2. PostgreSQL running and a `pathfinder` database created
+1. .NET 10 SDK installed
 
 Steps:
 1. Restore packages:
@@ -269,7 +277,6 @@ Verification:
 
 Troubleshooting:
 - If port conflict occurs, run `dotnet run --urls "https://localhost:5002"` and retry.
-
 
 Notes for Copilot authors:
 - When in doubt, ask for clarification instead of guessing architecture or sensitive values.
