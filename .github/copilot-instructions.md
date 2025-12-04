@@ -1,28 +1,23 @@
-# Copilot Instructions for csdac-pathfinder-25-honor-photography
+# Copilot Instructions
 
 ## Project Overview
 
-This repository contains the Pathfinder Photography Honor application for Pathfinders 2025. It's a .NET 9.0 Blazor Server application for managing photography submissions, voting, and grading with ELO ratings.
+This repository contains a .NET 10.0 Blazor Server application.
 
 **Key Technologies:**
-- .NET 9.0 / Blazor Server / C#
-- PostgreSQL 16
-- Google OAuth 2.0 authentication
-- OpenTelemetry & SigNoz observability
-- .NET Aspire for local development orchestration
+- .NET 10.0 / Blazor Server / C#
+- .NET Aspire for local development orchestration with OpenTelemetry
 
 ## Deployment Architecture
 
 **Development (Local):**
 - .NET Aspire (recommended - integrated observability)
 - Local .NET (direct development)
-- See [SETUP.md](../SETUP.md)
 
 **Production:**
 - Ubuntu 22.04 LTS (VM, bare metal, or cloud instance)
 - No Docker - native installation
 - Automated deployments via GitHub Actions (optional)
-- See [DEPLOY.md](../DEPLOY.md)
 
 ## Code of Conduct
 
@@ -49,29 +44,31 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ## Code Style
 
-**C# Specific:**
-- **Always use explicit types; never use `var`** - This is a hard requirement
-- Follow .NET naming conventions (PascalCase for public members, camelCase for private)
-- Use async/await properly - don't block on async code
-- Dispose IDisposable objects properly (using statements)
-- Keep methods focused and single-purpose
+**C# Specific (project hard rules):**
+- **Always use explicit types; never use `var`.** This is a hard requirement.
+- **Always declare explicit accessibility modifiers** on types and members (e.g., `public`, `internal`, `private`).
+- **Async methods must end with the `Async` suffix.**
+- Prefer **file-scoped namespaces** for new files.
+- Prefer **using declarations** (`using var stream = ...;`) or `using` statements to ensure proper disposal of `IDisposable` objects.
+- **Order using directives**: `System.*`, `Microsoft.*`, third-party, then project namespaces. Remove unused usings.
+- **Private fields** should use underscore-prefixed camelCase (e.g., `_logger`).
+- **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
+- **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
+- Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
+- Keep methods focused and single-purpose. Favor small, testable methods.
+- Dispose `IDisposable` objects properly. Prefer `using`/`using var` or implement `IAsyncDisposable` when appropriate.
+- Avoid blocking on async code. Use `async`/`await` throughout; do not call `.Result` or `.GetAwaiter().GetResult()` on tasks.
+- Follow .editorconfig rules strictly for formatting (indentation, spacing, naming, line length).
 
 **General:**
-- Write clear, readable code with meaningful variable and function names
-- Comment complex logic, not obvious code
-- Follow existing code patterns and conventions in the project
-- Keep functions small and focused on a single task
-- Write self-documenting code where possible
-- Use LINQ for collections where appropriate
+- Write clear, readable code with meaningful variable and function names.
+- Comment complex logic, not obvious code.
+- Follow existing code patterns and conventions in the project.
+- Keep functions small and focused on a single task.
+- Write self-documenting code where possible.
+- Use LINQ for collections where appropriate.
 
 ## Documentation
-
-**Important Files:**
-- `SETUP.md` - Local development setup (Aspire, local .NET)
-- `DEPLOY.md` - Production deployment guide (wizard-style with step-by-step files in deploy/ directory)
-- `deploy/*.md` - Individual deployment step files
-- `DEPLOYMENT_CHECKLIST.md` - Deployment verification checklist
-- `.github/workflows/deploy-bare-metal.yml` - Automated deployment workflow
 
 **Documentation Requirements:**
 - Update markdown files when changing functionality
@@ -84,7 +81,6 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 **Critical Requirements:**
 - Never commit sensitive information (API keys, passwords, personal data)
-- Use `openssl rand -base64 32` for generating secure passwords
 - Follow principle of least privilege (e.g., github-runner user NOT in sudo group)
 - Use restrictive file patterns in sudoers (e.g., `[0-9a-f]*` for SHA hashes, not `*`)
 - Set proper file permissions (600 for config files with secrets)
@@ -102,54 +98,9 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ### Application Architecture
 
-**User Roles:**
-- 0 = Pathfinder (default)
-- 1 = Instructor
-- 2 = Admin (first user auto-promoted)
-
-**Key Features:**
-- Photo submission with 10 composition rules
-- ELO rating system for photo comparison voting
-- Admin user management (promote, demote, delete with ELO recalculation)
-- PDF export functionality
-- Email notifications (optional)
-
-### Photography Content
-
-- Ensure all photography-related content is accurate and educational
-- Use appropriate photography terminology
-- Include practical examples and exercises where applicable
-- Make content accessible for beginners while providing depth for advanced learners
-
-### Educational Focus
-
-- Content should be appropriate for Pathfinder age group (typically 10-15 years old)
-- Use clear, age-appropriate language
-- Include visual examples where helpful
-- Provide step-by-step instructions for practical activities
-
-### Database Considerations
-
-- Always use Entity Framework migrations for schema changes
-- Test migrations both up and down
-- Consider data migration needs when changing models
-- ELO ratings are recalculated when users are deleted (important for integrity)
-
 ### Performance
 
 - Use async/await for I/O operations
-- Consider query performance with Entity Framework (use `.AsNoTracking()` for read-only)
-- Photo uploads limited to 10MB
-- Database queries should use proper indexes
-
-## Testing & Validation
-
-**Before Committing:**
-- Test locally with Aspire or local .NET
-- Run Entity Framework migrations if model changes
-- Verify Google OAuth still works
-- Check for obvious errors in browser console
-- Test photo upload functionality if related to changes
 
 **Documentation Changes:**
 - Verify all internal links work
@@ -214,7 +165,7 @@ Purpose: provide explicit, actionable rules so Copilot produces consistent, well
 - Prefer Markdown native elements; avoid HTML unless necessary.
 - Use headings to show document structure. Start with a single H1 and use H2/H3 for sub-sections.
 - Keep paragraphs short (1-3 sentences). Use bulleted or numbered lists for steps and enumerations.
-- Use backticks for inline code, file names, directories, function names, classes, and commands (e.g., `SETUP.md`, `dotnet run`, `PathfinderPhotography.AppHost`).
+- Use backticks for inline code, file names, directories, function names, classes, and commands (e.g., `SETUP.md`, `dotnet run`).
 - Use fenced code blocks for commands and code examples. Specify language for syntax highlighting (e.g., ```bash, ```csharp).
 - When documenting commands, show the full command and a short explanation on the next line.
 - Provide examples and expected outputs for commands where helpful.
@@ -231,7 +182,7 @@ Purpose: provide explicit, actionable rules so Copilot produces consistent, well
 - Use emojis sparingly and only when they add clarity (e.g., checklists).
 - When adding or updating docs, update the `DEPLOYMENT_CHECKLIST.md` or related index files if applicable.
 
-Checklist for generated docs (use this as a final-pass template):
+Checklist for generated docs ( use this as a final-pass template):
 1. Title and short description (one sentence)
 2. Audience and prerequisites
 3. Step-by-step instructions with code blocks and examples
@@ -248,8 +199,7 @@ Title: How to run the app locally
 Short description: Run the Blazor Server app locally for development.
 
 Prerequisites:
-1. .NET 9 SDK installed
-2. PostgreSQL running and a `pathfinder` database created
+1. .NET 10 SDK installed
 
 Steps:
 1. Restore packages:
@@ -269,7 +219,6 @@ Verification:
 
 Troubleshooting:
 - If port conflict occurs, run `dotnet run --urls "https://localhost:5002"` and retry.
-
 
 Notes for Copilot authors:
 - When in doubt, ask for clarification instead of guessing architecture or sensitive values.

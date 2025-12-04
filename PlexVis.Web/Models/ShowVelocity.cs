@@ -9,7 +9,7 @@ public class ShowVelocity
     public double AvgDaysToWatch { get; set; }
 
     // Velocity labels based on design system
-    public string VelocityLabel => AvgDaysToWatch switch
+    public string VelocityLabel => this.AvgDaysToWatch switch
     {
         <= 2 => "⚡ Fast",
         <= 7 => "🐢 Steady",
@@ -18,7 +18,7 @@ public class ShowVelocity
     };
 
     // CSS class for velocity badge styling
-    public string VelocityClass => AvgDaysToWatch switch
+    public string VelocityClass => this.AvgDaysToWatch switch
     {
         <= 2 => "badge-fast",
         <= 7 => "badge-steady",
@@ -27,7 +27,7 @@ public class ShowVelocity
     };
 
     // CSS class for velocity card left border
-    public string CardClass => AvgDaysToWatch switch
+    public string CardClass => this.AvgDaysToWatch switch
     {
         <= 2 => "velocity-fast",
         <= 7 => "velocity-steady",
