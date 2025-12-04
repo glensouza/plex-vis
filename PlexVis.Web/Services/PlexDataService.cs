@@ -12,6 +12,8 @@ public partial class PlexDataService
     private readonly PlexSettings _settings;
     private readonly ILogger<PlexDataService> _logger;
     private string? _cachedDatabasePath;
+    private DateTime _cacheTimestamp;
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
 
     public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
     {
@@ -35,10 +37,32 @@ public partial class PlexDataService
         // If a directory is specified, discover the latest backup
         if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
         {
-            return _cachedDatabasePath ??= DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+            // Invalidate cache if expired
+            if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
+            {
+                _logger.LogDebug("Database path cache expired, refreshing");
+                _cachedDatabasePath = null;
+            }
+
+            if (_cachedDatabasePath == null)
+            {
+                _cachedDatabasePath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                _cacheTimestamp = DateTime.UtcNow;
+            }
+
+            return _cachedDatabasePath;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Clears the cached database path, forcing a fresh discovery on the next call to GetDatabasePath().
+    /// </summary>
+    public void RefreshDatabasePath()
+    {
+        _cachedDatabasePath = null;
+        _logger.LogInformation("Database path cache cleared");
     }
 
     /// <summary>
@@ -63,8 +87,10 @@ public partial class PlexDataService
             // Sort by the date in the filename to get the latest backup
             // The date format YYYY-MM-DD sorts correctly when sorted alphabetically
             string latestBackup = backupFiles
-                .Where(f => BackupFileDatePattern().IsMatch(Path.GetFileName(f)))
-                .OrderByDescending(f => Path.GetFileName(f))
+                .Select(f => new { FullPath = f, FileName = Path.GetFileName(f) })
+                .Where(f => BackupFileDatePattern().IsMatch(f.FileName))
+                .OrderByDescending(f => f.FileName)
+                .Select(f => f.FullPath)
                 .FirstOrDefault() ?? string.Empty;
 
             if (string.IsNullOrEmpty(latestBackup))
