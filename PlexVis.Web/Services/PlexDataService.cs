@@ -6,24 +6,17 @@ using PlexVis.Web.Models;
 
 namespace PlexVis.Web.Services;
 
-public class PlexDataService
+public class PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
 {
-    private readonly PlexSettings _settings;
-    private readonly ILogger<PlexDataService> _logger;
+    private readonly PlexSettings settings = settings.Value;
 
-    public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
-    {
-        _settings = settings.Value;
-        _logger = logger;
-    }
-
-    public bool IsDatabaseConfigured => !string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath);
+    public bool IsDatabaseConfigured => !string.IsNullOrEmpty(this.settings.DatabasePath) && File.Exists(this.settings.DatabasePath);
 
     private SqliteConnection CreateConnection()
     {
         SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = _settings.DatabasePath,
+            DataSource = this.settings.DatabasePath,
             Mode = SqliteOpenMode.ReadOnly
         };
         return new SqliteConnection(builder.ConnectionString);
@@ -31,9 +24,9 @@ public class PlexDataService
 
     public async Task<IEnumerable<ShowVelocity>> GetViewingVelocityAsync()
     {
-        if (!IsDatabaseConfigured)
+        if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -86,22 +79,22 @@ public class PlexDataService
 
         try
         {
-            using SqliteConnection connection = CreateConnection();
+            await using SqliteConnection connection = this.CreateConnection();
             IEnumerable<ShowVelocity> results = await connection.QueryAsync<ShowVelocity>(sql);
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying viewing velocity");
+            logger.LogError(ex, "Error querying viewing velocity");
             return [];
         }
     }
 
     public async Task<LibraryStats> GetLibraryStatsAsync()
     {
-        if (!IsDatabaseConfigured)
+        if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return new LibraryStats();
         }
 
@@ -121,22 +114,22 @@ public class PlexDataService
 
         try
         {
-            using SqliteConnection connection = CreateConnection();
+            await using SqliteConnection connection = this.CreateConnection();
             LibraryStats? stats = await connection.QuerySingleOrDefaultAsync<LibraryStats>(sql);
             return stats ?? new LibraryStats();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying library stats");
+            logger.LogError(ex, "Error querying library stats");
             return new LibraryStats();
         }
     }
 
     public async Task<IEnumerable<RecentlyWatched>> GetRecentlyWatchedAsync(int limit = 10)
     {
-        if (!IsDatabaseConfigured)
+        if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -155,13 +148,13 @@ public class PlexDataService
 
         try
         {
-            using SqliteConnection connection = CreateConnection();
+            await using SqliteConnection connection = this.CreateConnection();
             IEnumerable<RecentlyWatched> results = await connection.QueryAsync<RecentlyWatched>(sql, new { Limit = limit });
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying recently watched");
+            logger.LogError(ex, "Error querying recently watched");
             return [];
         }
     }

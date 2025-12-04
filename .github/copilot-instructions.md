@@ -1,4 +1,4 @@
-# Copilot Instructions for csdac-pathfinder-25-honor-photography
+# Copilot Instructions
 
 ## Project Overview
 
@@ -44,20 +44,29 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 
 ## Code Style
 
-**C# Specific:**
-- **Always use explicit types; never use `var`** - This is a hard requirement
-- Follow .NET naming conventions (PascalCase for public members, camelCase for private)
-- Use async/await properly - don't block on async code
-- Dispose IDisposable objects properly (using statements)
-- Keep methods focused and single-purpose
+**C# Specific (project hard rules):**
+- **Always use explicit types; never use `var`.** This is a hard requirement.
+- **Always declare explicit accessibility modifiers** on types and members (e.g., `public`, `internal`, `private`).
+- **Async methods must end with the `Async` suffix.**
+- Prefer **file-scoped namespaces** for new files.
+- Prefer **using declarations** (`using var stream = ...;`) or `using` statements to ensure proper disposal of `IDisposable` objects.
+- **Order using directives**: `System.*`, `Microsoft.*`, third-party, then project namespaces. Remove unused usings.
+- **Private fields** should use underscore-prefixed camelCase (e.g., `_logger`).
+- **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
+- **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
+- Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
+- Keep methods focused and single-purpose. Favor small, testable methods.
+- Dispose `IDisposable` objects properly. Prefer `using`/`using var` or implement `IAsyncDisposable` when appropriate.
+- Avoid blocking on async code. Use `async`/`await` throughout; do not call `.Result` or `.GetAwaiter().GetResult()` on tasks.
+- Follow .editorconfig rules strictly for formatting (indentation, spacing, naming, line length).
 
 **General:**
-- Write clear, readable code with meaningful variable and function names
-- Comment complex logic, not obvious code
-- Follow existing code patterns and conventions in the project
-- Keep functions small and focused on a single task
-- Write self-documenting code where possible
-- Use LINQ for collections where appropriate
+- Write clear, readable code with meaningful variable and function names.
+- Comment complex logic, not obvious code.
+- Follow existing code patterns and conventions in the project.
+- Keep functions small and focused on a single task.
+- Write self-documenting code where possible.
+- Use LINQ for collections where appropriate.
 
 ## Documentation
 

@@ -7,14 +7,14 @@ public class RecentlyWatched
     public DateTime? LastWatched { get; set; }
     public int MetadataType { get; set; }
 
-    public string TypeLabel => MetadataType switch
+    public string TypeLabel => this.MetadataType switch
     {
         1 => "Movie",
         4 => "Episode",
         _ => "Media"
     };
 
-    public string TypeIcon => MetadataType switch
+    public string TypeIcon => this.MetadataType switch
     {
         1 => "🎬",
         4 => "📺",
