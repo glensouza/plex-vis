@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -6,10 +7,11 @@ using PlexVis.Web.Models;
 
 namespace PlexVis.Web.Services;
 
-public class PlexDataService
+public partial class PlexDataService
 {
     private readonly PlexSettings _settings;
     private readonly ILogger<PlexDataService> _logger;
+    private string? _cachedDatabasePath;
 
     public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
     {
@@ -17,13 +19,87 @@ public class PlexDataService
         _logger = logger;
     }
 
-    public bool IsDatabaseConfigured => !string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath);
+    /// <summary>
+    /// Gets the path to the database file to use.
+    /// If DatabasePath is configured, uses that directly.
+    /// Otherwise, if DatabaseDirectory is configured, discovers the latest backup database file.
+    /// </summary>
+    public string? GetDatabasePath()
+    {
+        // If a direct path is specified and exists, use it
+        if (!string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath))
+        {
+            return _settings.DatabasePath;
+        }
+
+        // If a directory is specified, discover the latest backup
+        if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
+        {
+            return _cachedDatabasePath ??= DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Discovers the latest Plex backup database file in the specified directory.
+    /// Plex backup files follow the naming convention: com.plexapp.plugins.library.db-YYYY-MM-DD
+    /// </summary>
+    private string? DiscoverLatestBackupDatabase(string directory)
+    {
+        try
+        {
+            // Pattern matches Plex backup database files like:
+            // com.plexapp.plugins.library.db-2023-10-15
+            // com.plexapp.plugins.library.db-2024-01-20
+            string[] backupFiles = Directory.GetFiles(directory, "com.plexapp.plugins.library.db-*");
+
+            if (backupFiles.Length == 0)
+            {
+                _logger.LogWarning("No backup database files found in directory: {Directory}", directory);
+                return null;
+            }
+
+            // Sort by the date in the filename to get the latest backup
+            // The date format YYYY-MM-DD sorts correctly when sorted alphabetically
+            string latestBackup = backupFiles
+                .Where(f => BackupFileDatePattern().IsMatch(Path.GetFileName(f)))
+                .OrderByDescending(f => Path.GetFileName(f))
+                .FirstOrDefault() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(latestBackup))
+            {
+                _logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
+                return null;
+            }
+
+            _logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            return latestBackup;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
+            return null;
+        }
+    }
+
+    // Regex pattern to match the date suffix in Plex backup filenames
+    [GeneratedRegex(@"com\.plexapp\.plugins\.library\.db-\d{4}-\d{2}-\d{2}$")]
+    private static partial Regex BackupFileDatePattern();
+
+    public bool IsDatabaseConfigured => GetDatabasePath() != null;
 
     private SqliteConnection CreateConnection()
     {
+        string? databasePath = GetDatabasePath();
+        if (string.IsNullOrEmpty(databasePath))
+        {
+            throw new InvalidOperationException("Database path is not configured or database file not found.");
+        }
+
         SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = _settings.DatabasePath,
+            DataSource = databasePath,
             Mode = SqliteOpenMode.ReadOnly
         };
         return new SqliteConnection(builder.ConnectionString);
