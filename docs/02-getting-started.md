@@ -11,6 +11,8 @@ This guide helps you set up Plex Velocity Visualizer for local development.
 
 Create or update `appsettings.Development.json` in the `PlexVis.Web` project:
 
+### Option 1: Use a specific database file
+
 ```json
 {
   "Plex": {
@@ -21,11 +23,38 @@ Create or update `appsettings.Development.json` in the `PlexVis.Web` project:
 }
 ```
 
+### Option 2: Auto-discover the latest backup database (Recommended)
+
+**Windows:**
+```json
+{
+  "Plex": {
+    "DatabaseDirectory": "C:\\Path\\To\\Plex\\Plug-in Support\\Databases",
+    "ServerUrl": "http://192.168.1.50:32400",
+    "Token": "<YOUR_PLEX_TOKEN>"
+  }
+}
+```
+
+**Linux/macOS:**
+```json
+{
+  "Plex": {
+    "DatabaseDirectory": "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases",
+    "ServerUrl": "http://192.168.1.50:32400",
+    "Token": "<YOUR_PLEX_TOKEN>"
+  }
+}
+```
+
+This option automatically discovers and uses the latest backup database file in the specified directory. Plex creates backup files with names like `com.plexapp.plugins.library.db-2024-01-15`, and the service will select the most recent one. This approach avoids conflicts with the active database that Plex is using.
+
 **Configuration Values:**
 
 | Setting | Description |
 |---------|-------------|
-| `DatabasePath` | Full path to your local copy of the Plex database |
+| `DatabasePath` | Full path to a specific Plex database file. Takes precedence over `DatabaseDirectory`. |
+| `DatabaseDirectory` | Directory containing Plex database backup files. The service auto-discovers and uses the latest backup. |
 | `ServerUrl` | URL of your Plex server (for fetching images) |
 | `Token` | Your Plex API token (see [How to find your Plex token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)) |
 

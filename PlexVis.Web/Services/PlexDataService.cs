@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -6,17 +7,160 @@ using PlexVis.Web.Models;
 
 namespace PlexVis.Web.Services;
 
-public class PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
+public partial class PlexDataService
 {
-    private readonly PlexSettings settings = settings.Value;
+    private readonly PlexSettings _settings;
+    private readonly ILogger<PlexDataService> _logger;
+    private readonly object _cacheLock = new();
+    private string? _cachedDatabasePath;
+    private DateTime _cacheTimestamp;
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
 
-    public bool IsDatabaseConfigured => !string.IsNullOrEmpty(this.settings.DatabasePath) && File.Exists(this.settings.DatabasePath);
+    public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
+    {
+        _settings = settings.Value;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Gets the path to the database file to use.
+    /// If DatabasePath is configured, uses that directly.
+    /// Otherwise, if DatabaseDirectory is configured, discovers the latest backup database file.
+    /// Note: This method may perform file system operations on cache miss or expiration.
+    /// The result is cached for 1 hour to minimize I/O overhead.
+    /// </summary>
+    public string? GetDatabasePath()
+    {
+        // If a direct path is specified and exists, use it
+        if (!string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath))
+        {
+            return _settings.DatabasePath;
+        }
+
+        // If a directory is specified, discover the latest backup
+        if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
+        {
+            lock (_cacheLock)
+            {
+                // Invalidate cache if expired
+                if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
+                {
+                    _logger.LogDebug("Database path cache expired, refreshing");
+                    _cachedDatabasePath = null;
+                }
+
+                if (_cachedDatabasePath == null)
+                {
+                    string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                    if (discoveredPath != null)
+                    {
+                        _cachedDatabasePath = discoveredPath;
+                        _cacheTimestamp = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        // Do not update _cacheTimestamp; retry discovery on next call
+                        _logger.LogDebug("No backup database found; will retry discovery on next call.");
+                    }
+                }
+
+                return _cachedDatabasePath;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Clears the cached database path, forcing a fresh discovery on the next call to GetDatabasePath().
+    /// This method is thread-safe.
+    /// </summary>
+    public void RefreshDatabasePath()
+    {
+        lock (_cacheLock)
+        {
+            _cachedDatabasePath = null;
+            _logger.LogInformation("Database path cache cleared");
+        }
+    }
+
+    /// <summary>
+    /// Discovers the latest Plex backup database file in the specified directory.
+    /// Plex backup files follow the naming convention: com.plexapp.plugins.library.db-YYYY-MM-DD
+    /// </summary>
+    private string? DiscoverLatestBackupDatabase(string directory)
+    {
+        try
+        {
+            // Pattern matches Plex backup database files like:
+            // com.plexapp.plugins.library.db-2023-10-15
+            // com.plexapp.plugins.library.db-2024-01-20
+            string[] backupFiles = Directory.GetFiles(directory, "com.plexapp.plugins.library.db-*");
+
+            if (backupFiles.Length == 0)
+            {
+                _logger.LogWarning("No backup database files found in directory: {Directory}", directory);
+                return null;
+            }
+
+            // Sort by the date in the filename to get the latest backup
+            // The date format YYYY-MM-DD sorts correctly when sorted alphabetically
+            string latestBackup = backupFiles
+                .Select(f => new { FullPath = f, FileName = Path.GetFileName(f) })
+                .Where(f => BackupFileDatePattern().IsMatch(f.FileName))
+                .OrderByDescending(f => f.FileName)
+                .Select(f => f.FullPath)
+                .FirstOrDefault() ?? string.Empty;
+
+            if (string.IsNullOrEmpty(latestBackup))
+            {
+                _logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
+                return null;
+            }
+
+            _logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            if (!File.Exists(latestBackup))
+            {
+                _logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
+                return null;
+            }
+            return latestBackup;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
+            return null;
+        }
+    }
+
+    // Regex pattern to match the date suffix in Plex backup filenames
+    // Regex pattern matches: com.plexapp.plugins.library.db-YYYY-MM-DD
+    // - YYYY: 4 digits
+    // - MM: 01-12
+    // - DD: 01-31
+    // Note: This pattern allows invalid dates like 2024-02-31. Since Plex generates these
+    // filenames with valid dates, this is acceptable for our use case.
+    [GeneratedRegex(@"com\.plexapp\.plugins\.library\.db-\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")]
+    private static partial Regex BackupFileDatePattern();
+
+    /// <summary>
+    /// Gets whether a database is configured and available.
+    /// Note: This property calls GetDatabasePath() which may perform file system operations
+    /// on cache miss or expiration. Results are cached for 1 hour.
+    /// </summary>
+    public bool IsDatabaseConfigured => GetDatabasePath() != null;
 
     private SqliteConnection CreateConnection()
     {
+        string? databasePath = GetDatabasePath();
+        if (string.IsNullOrEmpty(databasePath))
+        {
+            throw new InvalidOperationException("Database path is not configured or database file not found.");
+        }
+
         SqliteConnectionStringBuilder builder = new()
         {
-            DataSource = this.settings.DatabasePath,
+            DataSource = databasePath,
             Mode = SqliteOpenMode.ReadOnly
         };
         return new SqliteConnection(builder.ConnectionString);
