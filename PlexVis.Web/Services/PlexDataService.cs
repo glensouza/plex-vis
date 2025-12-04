@@ -11,6 +11,7 @@ public partial class PlexDataService
 {
     private readonly PlexSettings _settings;
     private readonly ILogger<PlexDataService> _logger;
+    private readonly object _cacheLock = new();
     private string? _cachedDatabasePath;
     private DateTime _cacheTimestamp;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
@@ -25,6 +26,8 @@ public partial class PlexDataService
     /// Gets the path to the database file to use.
     /// If DatabasePath is configured, uses that directly.
     /// Otherwise, if DatabaseDirectory is configured, discovers the latest backup database file.
+    /// Note: This method may perform file system operations on cache miss or expiration.
+    /// The result is cached for 1 hour to minimize I/O overhead.
     /// </summary>
     public string? GetDatabasePath()
     {
@@ -37,29 +40,32 @@ public partial class PlexDataService
         // If a directory is specified, discover the latest backup
         if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
         {
-            // Invalidate cache if expired
-            if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
+            lock (_cacheLock)
             {
-                _logger.LogDebug("Database path cache expired, refreshing");
-                _cachedDatabasePath = null;
-            }
-
-            if (_cachedDatabasePath == null)
-            {
-                string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
-                if (discoveredPath != null)
+                // Invalidate cache if expired
+                if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
                 {
-                    _cachedDatabasePath = discoveredPath;
-                    _cacheTimestamp = DateTime.UtcNow;
+                    _logger.LogDebug("Database path cache expired, refreshing");
+                    _cachedDatabasePath = null;
                 }
-                else
-                {
-                    // Do not update _cacheTimestamp; retry discovery on next call
-                    _logger.LogDebug("No backup database found; will retry discovery on next call.");
-                }
-            }
 
-            return _cachedDatabasePath;
+                if (_cachedDatabasePath == null)
+                {
+                    string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                    if (discoveredPath != null)
+                    {
+                        _cachedDatabasePath = discoveredPath;
+                        _cacheTimestamp = DateTime.UtcNow;
+                    }
+                    else
+                    {
+                        // Do not update _cacheTimestamp; retry discovery on next call
+                        _logger.LogDebug("No backup database found; will retry discovery on next call.");
+                    }
+                }
+
+                return _cachedDatabasePath;
+            }
         }
 
         return null;
@@ -67,11 +73,15 @@ public partial class PlexDataService
 
     /// <summary>
     /// Clears the cached database path, forcing a fresh discovery on the next call to GetDatabasePath().
+    /// This method is thread-safe.
     /// </summary>
     public void RefreshDatabasePath()
     {
-        _cachedDatabasePath = null;
-        _logger.LogInformation("Database path cache cleared");
+        lock (_cacheLock)
+        {
+            _cachedDatabasePath = null;
+            _logger.LogInformation("Database path cache cleared");
+        }
     }
 
     /// <summary>
@@ -128,9 +138,16 @@ public partial class PlexDataService
     // - YYYY: 4 digits
     // - MM: 01-12
     // - DD: 01-31
+    // Note: This pattern allows invalid dates like 2024-02-31. Since Plex generates these
+    // filenames with valid dates, this is acceptable for our use case.
     [GeneratedRegex(@"com\.plexapp\.plugins\.library\.db-\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")]
     private static partial Regex BackupFileDatePattern();
 
+    /// <summary>
+    /// Gets whether a database is configured and available.
+    /// Note: This property calls GetDatabasePath() which may perform file system operations
+    /// on cache miss or expiration. Results are cached for 1 hour.
+    /// </summary>
     public bool IsDatabaseConfigured => GetDatabasePath() != null;
 
     private SqliteConnection CreateConnection()

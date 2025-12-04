@@ -25,10 +25,22 @@ Create or update `appsettings.Development.json` in the `PlexVis.Web` project:
 
 ### Option 2: Auto-discover the latest backup database (Recommended)
 
+**Windows:**
 ```json
 {
   "Plex": {
     "DatabaseDirectory": "C:\\Path\\To\\Plex\\Plug-in Support\\Databases",
+    "ServerUrl": "http://192.168.1.50:32400",
+    "Token": "<YOUR_PLEX_TOKEN>"
+  }
+}
+```
+
+**Linux/macOS:**
+```json
+{
+  "Plex": {
+    "DatabaseDirectory": "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server/Plug-in Support/Databases",
     "ServerUrl": "http://192.168.1.50:32400",
     "Token": "<YOUR_PLEX_TOKEN>"
   }
