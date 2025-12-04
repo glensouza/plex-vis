@@ -124,7 +124,11 @@ public partial class PlexDataService
     }
 
     // Regex pattern to match the date suffix in Plex backup filenames
-    [GeneratedRegex(@"com\.plexapp\.plugins\.library\.db-\d{4}-\d{2}-\d{2}$")]
+    // Regex pattern matches: com.plexapp.plugins.library.db-YYYY-MM-DD
+    // - YYYY: 4 digits
+    // - MM: 01-12
+    // - DD: 01-31
+    [GeneratedRegex(@"com\.plexapp\.plugins\.library\.db-\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$")]
     private static partial Regex BackupFileDatePattern();
 
     public bool IsDatabaseConfigured => GetDatabasePath() != null;
