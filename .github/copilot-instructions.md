@@ -107,11 +107,54 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 - Check markdown formatting
 - Ensure consistency with related docs
 
+## Deployment Paths
+
+**Local Development:**
+1. Aspire: `dotnet run --project PathfinderPhotography.AppHost` (automatic SigNoz)
+2. Local .NET: `dotnet run` (manual PostgreSQL setup)
+
+**Production Deployment:**
+1. Manual: Follow [DEPLOY.md](../DEPLOY.md) step-by-step
+2. Automated: Set up GitHub Actions runner on server (section 7 of deployment guide)
+   - Every push to `main` triggers automated deployment
+   - Includes backup, health checks, and automatic rollback
+
+## Common Tasks
+
+**Add a new EF migration:**
+```bash
+dotnet ef migrations add MeaningfulName
+dotnet ef database update
+```
+
+**Test production build locally:**
+```bash
+dotnet publish -c Release -o ./publish
+cd ./publish
+ASPNETCORE_ENVIRONMENT=Production dotnet PathfinderPhotography.dll
+```
+
+**View logs in production:**
+```bash
+sudo journalctl -u pathfinder-photography -f
+```
+
 ## Licensing
 
 - All contributions will be licensed under the MIT License
 - Ensure any third-party content or images used have appropriate permissions
 - Provide attribution for external resources
+
+## Questions and Support
+
+If you have questions or need help:
+- Check existing issues and discussions
+- Review [SETUP.md](../SETUP.md) for development setup
+- Review [DEPLOY.md](../DEPLOY.md) for production
+- Open an issue with your question
+- Reach out to the project maintainers
+
+Thank you for contributing to this educational project! 🎉
 
 ---
 
@@ -139,7 +182,7 @@ Purpose: provide explicit, actionable rules so Copilot produces consistent, well
 - Use emojis sparingly and only when they add clarity (e.g., checklists).
 - When adding or updating docs, update the `DEPLOYMENT_CHECKLIST.md` or related index files if applicable.
 
-Checklist for generated docs (use this as a final-pass template):
+Checklist for generated docs ( use this as a final-pass template):
 1. Title and short description (one sentence)
 2. Audience and prerequisites
 3. Step-by-step instructions with code blocks and examples
@@ -176,7 +219,6 @@ Verification:
 
 Troubleshooting:
 - If port conflict occurs, run `dotnet run --urls "https://localhost:5002"` and retry.
-
 
 Notes for Copilot authors:
 - When in doubt, ask for clarification instead of guessing architecture or sensitive values.
