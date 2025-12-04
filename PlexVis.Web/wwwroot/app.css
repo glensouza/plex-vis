@@ -1,56 +1,791 @@
+/* ==========================================
+   PlexVis Design System
+   Based on Plex Velocity Design Guidelines
+   ========================================== */
+
+:root {
+    /* Core Palette - Plex Native */
+    --plex-orange: #E5A00D;
+    --bg-main: #1E1E1E;
+    --bg-surface: #2D2D2D;
+    --bg-elevated: #3D3D3D;
+    --text-primary: #ECF0F1;
+    --text-secondary: #95A5A6;
+    
+    /* Velocity Color Scale */
+    --velocity-fast: #2ECC71;      /* 0-2 days */
+    --velocity-steady: #F1C40F;    /* 3-7 days */
+    --velocity-stale: #E74C3C;     /* 8+ days */
+    --velocity-archived: #7F8C8D;  /* Months old */
+    
+    /* Semantic Colors */
+    --success: #2ECC71;
+    --warning: #F1C40F;
+    --danger: #E74C3C;
+    --border-color: #404040;
+}
+
+/* Typography */
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Inter', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
 }
 
+.metric-value {
+    font-family: 'Consolas', 'Roboto Mono', 'SF Mono', monospace;
+}
+
+/* Links */
 a, .btn-link {
-    color: #006bb7;
+    color: var(--plex-orange);
+    text-decoration: none;
+    transition: color 0.2s ease;
 }
 
+a:hover {
+    color: #F0C14B;
+}
+
+/* Buttons */
 .btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    color: var(--bg-main);
+    background-color: var(--plex-orange);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #F0C14B;
+    transform: translateY(-1px);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem var(--bg-main), 0 0 0 0.25rem var(--plex-orange);
 }
 
+/* Content Area */
 .content {
-    padding-top: 1.1rem;
+    padding: 1.5rem;
+    min-height: 100vh;
+}
+
+/* Headings */
+h1, h2, h3 {
+    color: var(--text-primary);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
 }
 
 h1:focus {
     outline: none;
 }
 
+/* Code blocks */
+code, pre {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+}
+
+code {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.9em;
+}
+
+pre {
+    padding: 1rem;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+}
+
+pre code {
+    padding: 0;
+    background: transparent;
+}
+
+/* ==========================================
+   Dashboard Layout
+   ========================================== */
+
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.hero {
+    text-align: center;
+    padding: 2rem 0 3rem;
+}
+
+.hero h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    color: var(--plex-orange);
+}
+
+.tagline {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}
+
+/* Setup Card */
+.setup-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 600px;
+    margin: 2rem auto;
+}
+
+.setup-card h2 {
+    margin-top: 0;
+    color: var(--plex-orange);
+}
+
+/* ==========================================
+   Stats Grid
+   ========================================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--plex-orange);
+}
+
+.stat-label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.stat-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* ==========================================
+   Content Grid & Panels
+   ========================================== */
+
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.panel h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ==========================================
+   Velocity Cards - Core Component
+   ========================================== */
+
+.velocity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.velocity-card {
+    background-color: var(--bg-surface);
+    border-radius: 8px;
+    border-left: 4px solid var(--velocity-color, var(--plex-orange));
+    color: var(--text-primary);
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.velocity-card:hover {
+    background-color: var(--bg-elevated);
+}
+
+.velocity-card.velocity-fast {
+    border-left-color: var(--velocity-fast);
+}
+
+.velocity-card.velocity-steady {
+    border-left-color: var(--velocity-steady);
+}
+
+.velocity-card.velocity-stale {
+    border-left-color: var(--velocity-stale);
+}
+
+.velocity-card.velocity-archived {
+    border-left-color: var(--velocity-archived);
+}
+
+.velocity-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.show-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.episode-info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.velocity-days {
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin-right: 0.5rem;
+}
+
+/* Velocity Badge - Orange Low Opacity Style */
+.velocity-badge {
+    background-color: rgba(229, 160, 13, 0.2);
+    color: var(--plex-orange);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.velocity-badge.badge-fast {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: var(--velocity-fast);
+}
+
+.velocity-badge.badge-steady {
+    background-color: rgba(241, 196, 15, 0.2);
+    color: var(--velocity-steady);
+}
+
+.velocity-badge.badge-stale {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: var(--velocity-stale);
+}
+
+.velocity-badge.badge-archived {
+    background-color: rgba(127, 140, 141, 0.2);
+    color: var(--velocity-archived);
+}
+
+/* Legacy urgency classes mapped to new velocity system */
+.urgency-hot {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: var(--velocity-fast);
+}
+
+.urgency-quick {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: var(--velocity-fast);
+}
+
+.urgency-regular {
+    background-color: rgba(241, 196, 15, 0.2);
+    color: var(--velocity-steady);
+}
+
+.urgency-slow {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: var(--velocity-stale);
+}
+
+.urgency-backlog {
+    background-color: rgba(127, 140, 141, 0.2);
+    color: var(--velocity-archived);
+}
+
+.view-all-link {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--plex-orange);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.view-all-link:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================
+   Recent List
+   ========================================== */
+
+.recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.recent-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.recent-item:hover {
+    background: #4D4D4D;
+}
+
+.type-icon {
+    font-size: 1.5rem;
+}
+
+.recent-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.recent-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.no-data {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* ==========================================
+   Page Layout
+   ========================================== */
+
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.page-header p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ==========================================
+   Velocity Table
+   ========================================== */
+
+.velocity-table-container {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.velocity-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.velocity-table th {
+    background: var(--bg-elevated);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.velocity-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.velocity-table tr:last-child td {
+    border-bottom: none;
+}
+
+.velocity-table tr:hover td {
+    background: var(--bg-elevated);
+}
+
+.show-cell {
+    font-weight: 600;
+}
+
+.episode-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.season-ep {
+    font-weight: 500;
+    color: var(--plex-orange);
+}
+
+.ep-title {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.days-cell {
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Legend
+   ========================================== */
+
+.legend {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.legend h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Empty State
+   ========================================== */
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Library Stats
+   ========================================== */
+
+.library-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stats-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.stats-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-block {
+    text-align: center;
+}
+
+.stat-number {
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--plex-orange);
+}
+
+.stat-name {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Progress Bar */
+.progress-bar {
+    height: 8px;
+    background: var(--bg-elevated);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--plex-orange), #F0C14B);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.progress-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+/* Storage Display */
+.storage-display {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.storage-value {
+    font-family: 'Consolas', 'Roboto Mono', monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--plex-orange);
+}
+
+.storage-label {
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Recent Section
+   ========================================== */
+
+.recent-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.recent-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.recent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.recent-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.recent-card:hover {
+    background: #4D4D4D;
+}
+
+.recent-card-icon {
+    font-size: 2rem;
+}
+
+.recent-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.recent-card-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.recent-card-meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.type-badge {
+    background: var(--bg-main);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ==========================================
+   Form Elements
+   ========================================== */
+
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--success);
 }
 
 .invalid {
-    outline: 1px solid #e51680;
+    outline: 1px solid var(--danger);
 }
 
 .validation-message {
-    color: #e51680;
+    color: var(--danger);
 }
+
+/* ==========================================
+   Error Handling
+   ========================================== */
 
 .blazor-error-boundary {
     background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
     padding: 1rem 1rem 1rem 3.7rem;
     color: white;
+    border-radius: 8px;
 }
 
-    .blazor-error-boundary::after {
-        content: "An error has occurred."
-    }
+.blazor-error-boundary::after {
+    content: "An error has occurred."
+}
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
+    color: var(--text-secondary);
     text-align: end;
 }
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/* ==========================================
+   Responsive Design
+   ========================================== */
+
+@media (max-width: 768px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero h1 {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-row {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .velocity-table-container {
+        overflow-x: auto;
+    }
+    
+    .legend-grid {
+        grid-template-columns: 1fr;
+    }
 }
