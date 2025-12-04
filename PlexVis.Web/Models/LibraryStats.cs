@@ -7,5 +7,5 @@ public class LibraryStats
     public int TotalEpisodes { get; set; }
     public int WatchedMovies { get; set; }
     public int WatchedEpisodes { get; set; }
-    public double TotalSizeGB { get; set; }
+    public double TotalSizeGb { get; set; }
 }
