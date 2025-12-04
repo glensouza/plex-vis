@@ -46,8 +46,17 @@ public partial class PlexDataService
 
             if (_cachedDatabasePath == null)
             {
-                _cachedDatabasePath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
-                _cacheTimestamp = DateTime.UtcNow;
+                string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                if (discoveredPath != null)
+                {
+                    _cachedDatabasePath = discoveredPath;
+                    _cacheTimestamp = DateTime.UtcNow;
+                }
+                else
+                {
+                    // Do not update _cacheTimestamp; retry discovery on next call
+                    _logger.LogDebug("No backup database found; will retry discovery on next call.");
+                }
             }
 
             return _cachedDatabasePath;
