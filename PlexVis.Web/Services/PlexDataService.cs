@@ -166,7 +166,11 @@ public partial class PlexDataService
         return new SqliteConnection(builder.ConnectionString);
     }
 
-    public async Task<IEnumerable<ShowVelocity>> GetViewingVelocityAsync()
+    /// <summary>
+    /// Gets all Plex user accounts from the database.
+    /// </summary>
+    /// <returns>A collection of PlexAccount objects representing available user accounts.</returns>
+    public async Task<IEnumerable<PlexAccount>> GetAccountsAsync()
     {
         if (!this.IsDatabaseConfigured)
         {
@@ -175,6 +179,46 @@ public partial class PlexDataService
         }
 
         const string sql = """
+            SELECT DISTINCT 
+                account_id AS Id,
+                COALESCE(
+                    (SELECT name FROM accounts WHERE id = metadata_item_settings.account_id),
+                    'User ' || account_id
+                ) AS Name
+            FROM metadata_item_settings
+            WHERE account_id IS NOT NULL
+            ORDER BY Name;
+            """;
+
+        try
+        {
+            await using SqliteConnection connection = this.CreateConnection();
+            IEnumerable<PlexAccount> results = await connection.QueryAsync<PlexAccount>(sql);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError(ex, "Error querying Plex accounts");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Gets viewing velocity data for TV shows, optionally filtered by account.
+    /// </summary>
+    /// <param name="accountId">Optional account ID to filter results. If null, shows data for all accounts.</param>
+    /// <returns>A collection of ShowVelocity objects representing viewing velocity for shows.</returns>
+    public async Task<IEnumerable<ShowVelocity>> GetViewingVelocityAsync(int? accountId = null)
+    {
+        if (!this.IsDatabaseConfigured)
+        {
+            this.logger.LogWarning("Plex database not configured or not found");
+            return [];
+        }
+
+        string accountFilter = accountId.HasValue ? "AND settings.account_id = @AccountId" : "";
+
+        string sql = $"""
             WITH 
             -- Shows that have at least one watched episode
             ShowsWithWatchedEpisodes AS (
@@ -185,6 +229,7 @@ public partial class PlexDataService
                 JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND settings.view_count > 0
+                  {accountFilter}
             ),
             -- Calculate lag for ALL episodes (watched and unwatched)
             -- Watched: time from added_at to last_viewed_at
@@ -202,6 +247,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                    {(accountId.HasValue ? "AND settings.account_id = @AccountId" : "")}
                 WHERE episode.metadata_type = 4
                   AND episode.added_at IS NOT NULL
             ),
@@ -227,6 +273,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                    {(accountId.HasValue ? "AND settings.account_id = @AccountId" : "")}
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
                 GROUP BY tvshow.id
@@ -249,7 +296,7 @@ public partial class PlexDataService
         try
         {
             await using SqliteConnection connection = this.CreateConnection();
-            IEnumerable<ShowVelocity> results = await connection.QueryAsync<ShowVelocity>(sql);
+            IEnumerable<ShowVelocity> results = await connection.QueryAsync<ShowVelocity>(sql, new { AccountId = accountId });
             return results;
         }
         catch (Exception ex)

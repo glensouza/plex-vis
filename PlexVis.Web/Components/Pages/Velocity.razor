@@ -19,7 +19,21 @@
             <a href="/" class="btn-primary">Go to Dashboard</a>
         </div>
     }
-    else if (velocityItems.Any())
+    else
+    {
+        <div class="filter-section">
+            <label for="userFilter" class="filter-label">👤 Filter by User:</label>
+            <select id="userFilter" class="user-filter-dropdown" @onchange="OnUserFilterChangedAsync">
+                <option value="">All Users</option>
+                @foreach (PlexAccount account in accounts)
+                {
+                    <option value="@account.Id" selected="@(selectedAccountId == account.Id)">@account.Name</option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (PlexData.IsDatabaseConfigured && velocityItems.Any())
     {
         <div class="velocity-table-container">
             <table class="velocity-table">
@@ -72,7 +86,7 @@
             </div>
         </div>
     }
-    else
+    else if (PlexData.IsDatabaseConfigured)
     {
         <div class="empty-state">
             <div class="empty-icon">📺</div>
@@ -84,12 +98,22 @@
 
 @code {
     private IEnumerable<ShowVelocity> velocityItems = [];
+    private IEnumerable<PlexAccount> accounts = [];
+    private int? selectedAccountId;
 
     protected override async Task OnInitializedAsync()
     {
         if (PlexData.IsDatabaseConfigured)
         {
+            accounts = await PlexData.GetAccountsAsync();
             velocityItems = await PlexData.GetViewingVelocityAsync();
         }
+    }
+
+    private async Task OnUserFilterChangedAsync(ChangeEventArgs e)
+    {
+        string? value = e.Value?.ToString();
+        selectedAccountId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+        velocityItems = await PlexData.GetViewingVelocityAsync(selectedAccountId);
     }
 }
