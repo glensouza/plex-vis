@@ -51,7 +51,7 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 - Prefer **file-scoped namespaces** for new files.
 - Prefer **using declarations** (`using var stream = ...;`) or `using` statements to ensure proper disposal of `IDisposable` objects.
 - **Order using directives**: `System.*`, `Microsoft.*`, third-party, then project namespaces. Remove unused usings.
-- **No variables should start with underscore.** Use camelCase for private fields (e.g., `logger`, `settings`).
+- **No variables should start with underscore.** Use camelCase for private fields (e.g., `logger`, `settings`). **Always access private instance fields with `this.` prefix** (e.g., `this.logger`, `this.settings`).
 - **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
 - **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
 - Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
