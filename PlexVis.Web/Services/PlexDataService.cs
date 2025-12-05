@@ -9,17 +9,17 @@ namespace PlexVis.Web.Services;
 
 public partial class PlexDataService
 {
-    private readonly PlexSettings _settings;
-    private readonly ILogger<PlexDataService> _logger;
-    private readonly object _cacheLock = new();
-    private string? _cachedDatabasePath;
-    private DateTime _cacheTimestamp;
+    private readonly PlexSettings settings;
+    private readonly ILogger<PlexDataService> logger;
+    private readonly object cacheLock = new();
+    private string? cachedDatabasePath;
+    private DateTime cacheTimestamp;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
 
-    public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
+    public PlexDataService(IOptions<PlexSettings> plexSettings, ILogger<PlexDataService> plexLogger)
     {
-        _settings = settings.Value;
-        _logger = logger;
+        settings = plexSettings.Value;
+        logger = plexLogger;
     }
 
     /// <summary>
@@ -32,39 +32,39 @@ public partial class PlexDataService
     public string? GetDatabasePath()
     {
         // If a direct path is specified and exists, use it
-        if (!string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath))
+        if (!string.IsNullOrEmpty(settings.DatabasePath) && File.Exists(settings.DatabasePath))
         {
-            return _settings.DatabasePath;
+            return settings.DatabasePath;
         }
 
         // If a directory is specified, discover the latest backup
-        if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
+        if (!string.IsNullOrEmpty(settings.DatabaseDirectory) && Directory.Exists(settings.DatabaseDirectory))
         {
-            lock (_cacheLock)
+            lock (cacheLock)
             {
                 // Invalidate cache if expired
-                if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
+                if (cachedDatabasePath != null && DateTime.UtcNow - cacheTimestamp > CacheExpiration)
                 {
-                    _logger.LogDebug("Database path cache expired, refreshing");
-                    _cachedDatabasePath = null;
+                    logger.LogDebug("Database path cache expired, refreshing");
+                    cachedDatabasePath = null;
                 }
 
-                if (_cachedDatabasePath == null)
+                if (cachedDatabasePath == null)
                 {
-                    string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                    string? discoveredPath = DiscoverLatestBackupDatabase(settings.DatabaseDirectory);
                     if (discoveredPath != null)
                     {
-                        _cachedDatabasePath = discoveredPath;
-                        _cacheTimestamp = DateTime.UtcNow;
+                        cachedDatabasePath = discoveredPath;
+                        cacheTimestamp = DateTime.UtcNow;
                     }
                     else
                     {
-                        // Do not update _cacheTimestamp; retry discovery on next call
-                        _logger.LogDebug("No backup database found; will retry discovery on next call.");
+                        // Do not update cacheTimestamp; retry discovery on next call
+                        logger.LogDebug("No backup database found; will retry discovery on next call.");
                     }
                 }
 
-                return _cachedDatabasePath;
+                return cachedDatabasePath;
             }
         }
 
@@ -77,10 +77,10 @@ public partial class PlexDataService
     /// </summary>
     public void RefreshDatabasePath()
     {
-        lock (_cacheLock)
+        lock (cacheLock)
         {
-            _cachedDatabasePath = null;
-            _logger.LogInformation("Database path cache cleared");
+            cachedDatabasePath = null;
+            logger.LogInformation("Database path cache cleared");
         }
     }
 
@@ -99,7 +99,7 @@ public partial class PlexDataService
 
             if (backupFiles.Length == 0)
             {
-                _logger.LogWarning("No backup database files found in directory: {Directory}", directory);
+                logger.LogWarning("No backup database files found in directory: {Directory}", directory);
                 return null;
             }
 
@@ -114,21 +114,21 @@ public partial class PlexDataService
 
             if (string.IsNullOrEmpty(latestBackup))
             {
-                _logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
+                logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
                 return null;
             }
 
-            _logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
             if (!File.Exists(latestBackup))
             {
-                _logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
+                logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
                 return null;
             }
             return latestBackup;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
+            logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
             return null;
         }
     }
@@ -170,7 +170,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -229,7 +229,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying viewing velocity");
+            logger.LogError(ex, "Error querying viewing velocity");
             return [];
         }
     }
@@ -238,7 +238,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return new LibraryStats();
         }
 
@@ -264,7 +264,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying library stats");
+            logger.LogError(ex, "Error querying library stats");
             return new LibraryStats();
         }
     }
@@ -273,7 +273,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            _logger.LogWarning("Plex database not configured or not found");
+            logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -298,7 +298,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying recently watched");
+            logger.LogError(ex, "Error querying recently watched");
             return [];
         }
     }
