@@ -1,0 +1,601 @@
+@page "/maintenance"
+@using PlexVis.Web.Models
+@using PlexVis.Web.Services
+@inject PlexDataService PlexData
+
+@rendermode InteractiveServer
+
+<PageTitle>PlexVis - Maintenance</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1>🔧 Maintenance</h1>
+        <p>Database maintenance queries and reference scripts. Read-only queries are executed automatically; destructive operations display the SQL for reference only.</p>
+    </div>
+
+    @if (!PlexData.IsDatabaseConfigured)
+    {
+        <div class="setup-card">
+            <h2>⚙️ Setup Required</h2>
+            <p>Please configure your Plex database to see maintenance data.</p>
+            <a href="/" class="btn-primary">Go to Dashboard</a>
+        </div>
+    }
+    else
+    {
+        <div class="maintenance-info-banner">
+            <span class="info-icon">ℹ️</span>
+            <p>
+                <strong>Note:</strong> This app runs on a backup copy of your Plex database. 
+                Read-only queries (SELECT) are executed and results are shown below. 
+                Destructive queries (UPDATE/DELETE) are shown as reference only—run them directly on your Plex server with caution.
+            </p>
+        </div>
+
+        <div class="maintenance-tabs">
+            <button class="tab-button @(activeTab == "duplicates" ? "active" : "")" @onclick='() => SetActiveTab("duplicates")'>
+                📁 Duplicate Movies
+            </button>
+            <button class="tab-button @(activeTab == "duplicateEpisodes" ? "active" : "")" @onclick='() => SetActiveTab("duplicateEpisodes")'>
+                📺 Duplicate Episodes
+            </button>
+            <button class="tab-button @(activeTab == "unmatched" ? "active" : "")" @onclick='() => SetActiveTab("unmatched")'>
+                ❓ Unmatched Items
+            </button>
+            <button class="tab-button @(activeTab == "deleted" ? "active" : "")" @onclick='() => SetActiveTab("deleted")'>
+                🗑️ Soft-Deleted
+            </button>
+            <button class="tab-button @(activeTab == "reference" ? "active" : "")" @onclick='() => SetActiveTab("reference")'>
+                📜 SQL Reference
+            </button>
+        </div>
+
+        <div class="tab-content">
+            @if (isLoading)
+            {
+                <div class="loading-state">
+                    <span class="loading-spinner">⏳</span>
+                    <p>Loading data...</p>
+                </div>
+            }
+            else
+            {
+                @if (activeTab == "duplicates")
+                {
+                    <div class="maintenance-section">
+                        <h2>📁 Duplicate Movies</h2>
+                        <p class="section-description">Movies with more than one video file. Click on a movie to view file details. Items with exactly one 4K and one non-4K file are excluded as legitimate quality variants.</p>
+                        
+                        @if (duplicateMovies.Any())
+                        {
+                            <div class="maintenance-table-container">
+                                <table class="maintenance-table clickable-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Movie Title</th>
+                                            <th>Year</th>
+                                            <th>File Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (DuplicateMovie movie in duplicateMovies)
+                                        {
+                                            <tr @onclick="() => ShowMovieDetails(movie)" class="clickable-row">
+                                                <td>@movie.Title</td>
+                                                <td class="year-cell">@(movie.Year > 0 ? movie.Year.ToString() : "-")</td>
+                                                <td class="metric-value count-cell">@movie.FileCount</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="result-count">Found @duplicateMovies.Count() movie(s) with duplicate files.</p>
+                        }
+                        else
+                        {
+                            <div class="empty-result">
+                                <span class="success-icon">✅</span>
+                                <p>No duplicate movies found. Your library is clean!</p>
+                            </div>
+                        }
+                        
+                        <div class="sql-reference-box">
+                            <h4>SQL Query Used</h4>
+                            <pre><code>@DuplicatesSql</code></pre>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "duplicateEpisodes")
+                {
+                    <div class="maintenance-section">
+                        <h2>📺 Duplicate Episodes</h2>
+                        <p class="section-description">TV episodes with more than one video file. Click on an episode to view file details. Items with exactly one 4K and one non-4K file are excluded as legitimate quality variants.</p>
+                        
+                        @if (duplicateEpisodes.Any())
+                        {
+                            <div class="maintenance-table-container">
+                                <table class="maintenance-table clickable-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Show</th>
+                                            <th>Episode</th>
+                                            <th>Title</th>
+                                            <th>File Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (DuplicateEpisode episode in duplicateEpisodes)
+                                        {
+                                            <tr @onclick="() => ShowEpisodeDetails(episode)" class="clickable-row">
+                                                <td>@episode.ShowTitle</td>
+                                                <td class="episode-id-cell">@episode.EpisodeIdentifier</td>
+                                                <td>@episode.EpisodeTitle</td>
+                                                <td class="metric-value count-cell">@episode.FileCount</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="result-count">Found @duplicateEpisodes.Count() episode(s) with duplicate files.</p>
+                        }
+                        else
+                        {
+                            <div class="empty-result">
+                                <span class="success-icon">✅</span>
+                                <p>No duplicate episodes found. Your library is clean!</p>
+                            </div>
+                        }
+                        
+                        <div class="sql-reference-box">
+                            <h4>SQL Query Used</h4>
+                            <pre><code>@DuplicateEpisodesSql</code></pre>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "unmatched")
+                {
+                    <div class="maintenance-section">
+                        <h2>❓ Unmatched Items</h2>
+                        <p class="section-description">Files that Plex sees but hasn't matched to an online metadata agent. Consider using "Fix Match" in Plex.</p>
+                        
+                        @if (unmatchedItems.Any())
+                        {
+                            <div class="maintenance-table-container">
+                                <table class="maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Title</th>
+                                            <th>Added</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (UnmatchedItem item in unmatchedItems)
+                                        {
+                                            <tr>
+                                                <td class="id-cell">@item.Id</td>
+                                                <td>@item.Title</td>
+                                                <td class="date-cell">@(item.AddedAt?.ToString("MMM d, yyyy") ?? "Unknown")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="result-count">Found @unmatchedItems.Count() unmatched item(s).</p>
+                        }
+                        else
+                        {
+                            <div class="empty-result">
+                                <span class="success-icon">✅</span>
+                                <p>All items are matched. Great job!</p>
+                            </div>
+                        }
+                        
+                        <div class="sql-reference-box">
+                            <h4>SQL Query Used</h4>
+                            <pre><code>@UnmatchedSql</code></pre>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "deleted")
+                {
+                    <div class="maintenance-section">
+                        <h2>🗑️ Soft-Deleted Items</h2>
+                        <p class="section-description">Items marked as deleted but not yet permanently removed. Use "Empty Trash" in Plex to remove them permanently.</p>
+                        
+                        @if (softDeletedItems.Any())
+                        {
+                            <div class="maintenance-table-container">
+                                <table class="maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Title</th>
+                                            <th>Type</th>
+                                            <th>Deleted</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (SoftDeletedItem item in softDeletedItems)
+                                        {
+                                            <tr>
+                                                <td class="id-cell">@item.Id</td>
+                                                <td>@item.Title</td>
+                                                <td><span class="type-badge">@item.TypeLabel</span></td>
+                                                <td class="date-cell">@(item.DeletedAt?.ToString("MMM d, yyyy") ?? "Unknown")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="result-count">Found @softDeletedItems.Count() soft-deleted item(s).</p>
+                        }
+                        else
+                        {
+                            <div class="empty-result">
+                                <span class="success-icon">✅</span>
+                                <p>No soft-deleted items found. Your trash is empty!</p>
+                            </div>
+                        }
+                        
+                        <div class="sql-reference-box">
+                            <h4>SQL Query Used</h4>
+                            <pre><code>@SoftDeletedSql</code></pre>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "reference")
+                {
+                    <div class="maintenance-section">
+                        <h2>📜 SQL Reference Scripts</h2>
+                        <p class="section-description">Reference SQL scripts for advanced maintenance. These are for informational purposes—run them directly on your Plex server.</p>
+                        
+                        <div class="reference-scripts">
+                            <div class="script-card">
+                                <h3>⚠️ Reset "Date Added"</h3>
+                                <p class="warning-text">DESTRUCTIVE: Stop your Plex server before running UPDATE queries!</p>
+                                <p>Set the <code>added_at</code> timestamp for a specific movie ID:</p>
+                                <pre><code>@ResetDateAddedSql</code></pre>
+                                <div class="script-instructions">
+                                    <h4>How to use:</h4>
+                                    <ol>
+                                        <li>Stop your Plex Media Server</li>
+                                        <li>Find the movie's ID using Plex's web interface (hover over the item)</li>
+                                        <li>Calculate the Unix timestamp for your desired date</li>
+                                        <li>Replace <code>12345</code> with your movie ID and <code>1672531200</code> with your timestamp</li>
+                                        <li>Run the query using a SQLite tool (e.g., <code>sqlite3</code> CLI)</li>
+                                        <li>Restart Plex Media Server</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <div class="script-card">
+                                <h3>🎬 List All Movies with File Paths</h3>
+                                <p>Export a complete list of movies with their file locations and sizes:</p>
+                                <pre><code>@ListMoviesSql</code></pre>
+                            </div>
+                            
+                            <div class="script-card">
+                                <h3>📺 List All TV Episodes with File Paths</h3>
+                                <p>Export a complete list of TV episodes with show, season, and file information:</p>
+                                <pre><code>@ListEpisodesSql</code></pre>
+                            </div>
+                            
+                            <div class="script-card">
+                                <h3>🔖 List Items in a Collection</h3>
+                                <p>Find all items in a specific collection (replace 'Star Wars' with your collection name):</p>
+                                <pre><code>@CollectionSql</code></pre>
+                            </div>
+                            
+                            <div class="script-card">
+                                <h3>📊 Export Watch History</h3>
+                                <p>Export your complete watch history with view counts and dates:</p>
+                                <pre><code>@WatchHistorySql</code></pre>
+                            </div>
+                            
+                            <div class="script-card">
+                                <h3>🔇 Find Missing Subtitles</h3>
+                                <p>Find movies that don't have an external subtitle file:</p>
+                                <pre><code>@MissingSubtitlesSql</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@* Modal for Movie Details *@
+@if (showMovieModal && selectedMovie != null)
+{
+    <div class="modal-backdrop" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>🎬 @selectedMovie.Title @(selectedMovie.Year > 0 ? $"({selectedMovie.Year})" : "")</h3>
+                <button class="modal-close" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">@selectedMovie.FileCount duplicate file(s) found:</p>
+                <div class="file-list">
+                    @foreach (MediaFileDetail file in selectedMovie.Files)
+                    {
+                        <div class="file-item">
+                            <div class="file-resolution">
+                                <span class="resolution-badge @(file.Is4K ? "badge-4k" : "badge-hd")">@file.ResolutionLabel</span>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-path">@file.FilePath</div>
+                                <div class="file-meta">
+                                    <span>@file.Width × @file.Height</span>
+                                    <span>•</span>
+                                    <span>@file.SizeGb.ToString("N2") GB</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal for Episode Details *@
+@if (showEpisodeModal && selectedEpisode != null)
+{
+    <div class="modal-backdrop" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>📺 @selectedEpisode.ShowTitle - @selectedEpisode.EpisodeIdentifier</h3>
+                <button class="modal-close" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-episode-title">@selectedEpisode.EpisodeTitle</p>
+                <p class="modal-subtitle">@selectedEpisode.FileCount duplicate file(s) found:</p>
+                <div class="file-list">
+                    @foreach (MediaFileDetail file in selectedEpisode.Files)
+                    {
+                        <div class="file-item">
+                            <div class="file-resolution">
+                                <span class="resolution-badge @(file.Is4K ? "badge-4k" : "badge-hd")">@file.ResolutionLabel</span>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-path">@file.FilePath</div>
+                                <div class="file-meta">
+                                    <span>@file.Width × @file.Height</span>
+                                    <span>•</span>
+                                    <span>@file.SizeGb.ToString("N2") GB</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "duplicates";
+    private bool isLoading = true;
+    
+    private IEnumerable<DuplicateMovie> duplicateMovies = [];
+    private IEnumerable<DuplicateEpisode> duplicateEpisodes = [];
+    private IEnumerable<UnmatchedItem> unmatchedItems = [];
+    private IEnumerable<SoftDeletedItem> softDeletedItems = [];
+
+    // Track loaded state to avoid re-querying when results are empty
+    private bool duplicateMoviesLoaded;
+    private bool duplicateEpisodesLoaded;
+    private bool unmatchedItemsLoaded;
+    private bool softDeletedItemsLoaded;
+
+    // Modal state
+    private bool showMovieModal;
+    private bool showEpisodeModal;
+    private DuplicateMovie? selectedMovie;
+    private DuplicateEpisode? selectedEpisode;
+
+    // SQL reference strings
+    private const string DuplicatesSql = """
+        SELECT 
+            m.id, m.title, m.year,
+            p.file, ROUND(p.size / 1073741824.0, 2) AS SizeGB,
+            i.width, i.height
+        FROM metadata_items m
+        JOIN media_items i ON m.id = i.metadata_item_id
+        JOIN media_parts p ON i.id = p.media_item_id
+        WHERE m.metadata_type = 1
+        AND m.id IN (SELECT id FROM ... HAVING COUNT > 1)
+        -- Excludes 4K+non-4K pairs (2 files, one 4K, one not)
+        ORDER BY m.title;
+        """;
+
+    private const string DuplicateEpisodesSql = """
+        SELECT 
+            e.id, show.title, s."index", e."index", e.title,
+            p.file, ROUND(p.size / 1073741824.0, 2) AS SizeGB,
+            i.width, i.height
+        FROM metadata_items e
+        JOIN metadata_items s ON e.parent_id = s.id
+        JOIN metadata_items show ON s.parent_id = show.id
+        JOIN media_items i ON e.id = i.metadata_item_id
+        JOIN media_parts p ON i.id = p.media_item_id
+        WHERE e.metadata_type = 4
+        AND e.id IN (SELECT id FROM ... HAVING COUNT > 1)
+        -- Excludes 4K+non-4K pairs (2 files, one 4K, one not)
+        ORDER BY show.title, s."index", e."index";
+        """;
+    
+    private const string UnmatchedSql = """
+        SELECT 
+            id, 
+            title, 
+            added_at 
+        FROM metadata_items 
+        WHERE guid LIKE 'local://%' 
+        AND metadata_type IN (1, 2, 8);
+        """;
+    
+    private const string SoftDeletedSql = """
+        SELECT * FROM metadata_items 
+        WHERE deleted_at IS NOT NULL;
+        """;
+    
+    private const string ResetDateAddedSql = """
+        UPDATE metadata_items 
+        SET added_at = 1672531200
+        WHERE id = 12345;
+        """;
+    
+    private const string ListMoviesSql = """
+        SELECT 
+            m.title AS MovieTitle, 
+            m.year AS Year, 
+            p.file AS FilePath,
+            ROUND(p.size / 1073741824.0, 2) AS SizeGB
+        FROM metadata_items m
+        JOIN media_items i ON m.id = i.metadata_item_id
+        JOIN media_parts p ON i.id = p.media_item_id
+        WHERE m.metadata_type = 1
+        ORDER BY m.title;
+        """;
+    
+    private const string ListEpisodesSql = """
+        SELECT 
+            show.title AS ShowName,
+            s.index AS SeasonNumber,
+            e.index AS EpisodeNumber,
+            e.title AS EpisodeTitle,
+            p.file AS FilePath
+        FROM metadata_items e
+        JOIN metadata_items s ON e.parent_id = s.id
+        JOIN metadata_items show ON s.parent_id = show.id
+        JOIN media_items i ON e.id = i.metadata_item_id
+        JOIN media_parts p ON i.id = p.media_item_id
+        WHERE e.metadata_type = 4
+        ORDER BY show.title, s.index, e.index;
+        """;
+    
+    private const string CollectionSql = """
+        SELECT m.title, m.year
+        FROM metadata_items m
+        JOIN taggings tg ON m.id = tg.metadata_item_id
+        JOIN tags t ON tg.tag_id = t.id
+        WHERE t.tag = 'Star Wars' 
+        AND t.tag_type = 2;
+        """;
+    
+    private const string WatchHistorySql = """
+        SELECT 
+            m.title, 
+            settings.view_count, 
+            datetime(settings.last_viewed_at, 'unixepoch', 'localtime') as LastWatched
+        FROM metadata_items m
+        JOIN metadata_item_settings settings ON m.guid = settings.guid
+        WHERE settings.view_count > 0
+        ORDER BY settings.last_viewed_at DESC;
+        """;
+    
+    private const string MissingSubtitlesSql = """
+        SELECT m.title
+        FROM metadata_items m
+        WHERE m.metadata_type = 1
+        AND m.id NOT IN (
+            SELECT DISTINCT i.metadata_item_id
+            FROM media_items i
+            JOIN media_parts p ON i.id = p.media_item_id
+            JOIN media_streams s ON i.id = s.media_item_id
+            WHERE s.stream_type_id = 3
+        );
+        """;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PlexData.IsDatabaseConfigured)
+        {
+            await LoadDataForTabAsync();
+        }
+        else
+        {
+            this.isLoading = false;
+        }
+    }
+
+    private async Task SetActiveTab(string tab)
+    {
+        if (this.activeTab == tab) return;
+        
+        this.activeTab = tab;
+        this.isLoading = true;
+        StateHasChanged();
+        
+        await LoadDataForTabAsync();
+    }
+
+    private async Task LoadDataForTabAsync()
+    {
+        this.isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            switch (this.activeTab)
+            {
+                case "duplicates":
+                    if (!this.duplicateMoviesLoaded)
+                    {
+                        this.duplicateMovies = await PlexData.GetDuplicateMoviesAsync();
+                        this.duplicateMoviesLoaded = true;
+                    }
+                    break;
+                case "duplicateEpisodes":
+                    if (!this.duplicateEpisodesLoaded)
+                    {
+                        this.duplicateEpisodes = await PlexData.GetDuplicateEpisodesAsync();
+                        this.duplicateEpisodesLoaded = true;
+                    }
+                    break;
+                case "unmatched":
+                    if (!this.unmatchedItemsLoaded)
+                    {
+                        this.unmatchedItems = await PlexData.GetUnmatchedItemsAsync();
+                        this.unmatchedItemsLoaded = true;
+                    }
+                    break;
+                case "deleted":
+                    if (!this.softDeletedItemsLoaded)
+                    {
+                        this.softDeletedItems = await PlexData.GetSoftDeletedItemsAsync();
+                        this.softDeletedItemsLoaded = true;
+                    }
+                    break;
+            }
+        }
+        finally
+        {
+            this.isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowMovieDetails(DuplicateMovie movie)
+    {
+        this.selectedMovie = movie;
+        this.showMovieModal = true;
+    }
+
+    private void ShowEpisodeDetails(DuplicateEpisode episode)
+    {
+        this.selectedEpisode = episode;
+        this.showEpisodeModal = true;
+    }
+
+    private void CloseModal()
+    {
+        this.showMovieModal = false;
+        this.showEpisodeModal = false;
+        this.selectedMovie = null;
+        this.selectedEpisode = null;
+    }
+}
