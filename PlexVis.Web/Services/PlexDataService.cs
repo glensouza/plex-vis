@@ -415,14 +415,14 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
         try
         {
             await using SqliteConnection connection = this.CreateConnection();
-            IEnumerable<dynamic> rows = await connection.QueryAsync(sql);
+            IEnumerable<DuplicateMovieRow> rows = await connection.QueryAsync<DuplicateMovieRow>(sql);
 
             // Group by movie and filter out legitimate 4K+non-4K pairs
             Dictionary<int, DuplicateMovie> movieDict = [];
             
-            foreach (dynamic row in rows)
+            foreach (DuplicateMovieRow row in rows)
             {
-                int metadataItemId = (int)row.MetadataItemId;
+                int metadataItemId = row.MetadataItemId;
                 
                 if (!movieDict.TryGetValue(metadataItemId, out DuplicateMovie? movie))
                 {
@@ -430,13 +430,13 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
                     {
                         MetadataItemId = metadataItemId,
                         Title = row.Title ?? string.Empty,
-                        Year = (int)(row.Year ?? 0),
+                        Year = row.Year ?? 0,
                         Files = []
                     };
                     movieDict[metadataItemId] = movie;
                 }
 
-                movie.Files.Add(CreateMediaFileDetailFromRow(row));
+                movie.Files.Add(CreateMediaFileDetailFromMovieRow(row));
             }
 
             // Filter out movies with exactly 2 files where one is 4K and the other is not
@@ -503,13 +503,13 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
         try
         {
             await using SqliteConnection connection = this.CreateConnection();
-            IEnumerable<dynamic> rows = await connection.QueryAsync(sql);
+            IEnumerable<DuplicateEpisodeRow> rows = await connection.QueryAsync<DuplicateEpisodeRow>(sql);
 
             Dictionary<int, DuplicateEpisode> episodeDict = [];
             
-            foreach (dynamic row in rows)
+            foreach (DuplicateEpisodeRow row in rows)
             {
-                int metadataItemId = (int)row.MetadataItemId;
+                int metadataItemId = row.MetadataItemId;
                 
                 if (!episodeDict.TryGetValue(metadataItemId, out DuplicateEpisode? episode))
                 {
@@ -517,15 +517,15 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
                     {
                         MetadataItemId = metadataItemId,
                         ShowTitle = row.ShowTitle ?? string.Empty,
-                        SeasonNumber = (int)(row.SeasonNumber ?? 0),
-                        EpisodeNumber = (int)(row.EpisodeNumber ?? 0),
+                        SeasonNumber = row.SeasonNumber ?? 0,
+                        EpisodeNumber = row.EpisodeNumber ?? 0,
                         EpisodeTitle = row.EpisodeTitle ?? string.Empty,
                         Files = []
                     };
                     episodeDict[metadataItemId] = episode;
                 }
 
-                episode.Files.Add(CreateMediaFileDetailFromRow(row));
+                episode.Files.Add(CreateMediaFileDetailFromEpisodeRow(row));
             }
 
             // Filter out episodes with exactly 2 files where one is 4K and the other is not
@@ -548,16 +548,30 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
     }
 
     /// <summary>
-    /// Creates a MediaFileDetail instance from a dynamic database row.
+    /// Creates a MediaFileDetail instance from a DuplicateMovieRow.
     /// </summary>
-    private static MediaFileDetail CreateMediaFileDetailFromRow(dynamic row)
+    private static MediaFileDetail CreateMediaFileDetailFromMovieRow(DuplicateMovieRow row)
     {
         return new MediaFileDetail
         {
             FilePath = row.FilePath ?? string.Empty,
-            SizeGb = (double)(row.SizeGb ?? 0),
-            Width = (int)(row.Width ?? 0),
-            Height = (int)(row.Height ?? 0)
+            SizeGb = row.SizeGb ?? 0,
+            Width = row.Width ?? 0,
+            Height = row.Height ?? 0
+        };
+    }
+
+    /// <summary>
+    /// Creates a MediaFileDetail instance from a DuplicateEpisodeRow.
+    /// </summary>
+    private static MediaFileDetail CreateMediaFileDetailFromEpisodeRow(DuplicateEpisodeRow row)
+    {
+        return new MediaFileDetail
+        {
+            FilePath = row.FilePath ?? string.Empty,
+            SizeGb = row.SizeGb ?? 0,
+            Width = row.Width ?? 0,
+            Height = row.Height ?? 0
         };
     }
 
@@ -645,5 +659,97 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
             plexLogger.LogError(ex, "Error querying soft-deleted items");
             return [];
         }
+    }
+
+    /// <summary>
+    /// DTO for mapping duplicate movie query results from the database.
+    /// </summary>
+    private sealed class DuplicateMovieRow
+    {
+        /// <summary>
+        /// Gets or sets the metadata item identifier.
+        /// </summary>
+        public int MetadataItemId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the movie title.
+        /// </summary>
+        public string? Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the movie release year.
+        /// </summary>
+        public int? Year { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file path.
+        /// </summary>
+        public string? FilePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file size in gigabytes.
+        /// </summary>
+        public double? SizeGb { get; set; }
+
+        /// <summary>
+        /// Gets or sets the video width in pixels.
+        /// </summary>
+        public int? Width { get; set; }
+
+        /// <summary>
+        /// Gets or sets the video height in pixels.
+        /// </summary>
+        public int? Height { get; set; }
+    }
+
+    /// <summary>
+    /// DTO for mapping duplicate episode query results from the database.
+    /// </summary>
+    private sealed class DuplicateEpisodeRow
+    {
+        /// <summary>
+        /// Gets or sets the metadata item identifier.
+        /// </summary>
+        public int MetadataItemId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the TV show title.
+        /// </summary>
+        public string? ShowTitle { get; set; }
+
+        /// <summary>
+        /// Gets or sets the season number.
+        /// </summary>
+        public int? SeasonNumber { get; set; }
+
+        /// <summary>
+        /// Gets or sets the episode number.
+        /// </summary>
+        public int? EpisodeNumber { get; set; }
+
+        /// <summary>
+        /// Gets or sets the episode title.
+        /// </summary>
+        public string? EpisodeTitle { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file path.
+        /// </summary>
+        public string? FilePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the file size in gigabytes.
+        /// </summary>
+        public double? SizeGb { get; set; }
+
+        /// <summary>
+        /// Gets or sets the video width in pixels.
+        /// </summary>
+        public int? Width { get; set; }
+
+        /// <summary>
+        /// Gets or sets the video height in pixels.
+        /// </summary>
+        public int? Height { get; set; }
     }
 }
