@@ -436,18 +436,12 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
                     movieDict[metadataItemId] = movie;
                 }
 
-                movie.Files.Add(new MediaFileDetail
-                {
-                    FilePath = row.FilePath ?? string.Empty,
-                    SizeGb = (double)(row.SizeGb ?? 0),
-                    Width = (int)(row.Width ?? 0),
-                    Height = (int)(row.Height ?? 0)
-                });
+                movie.Files.Add(CreateMediaFileDetailFromRow(row));
             }
 
             // Filter out movies with exactly 2 files where one is 4K and the other is not
             List<DuplicateMovie> filteredMovies = movieDict.Values
-                .Where(m => !this.IsLegitimate4KVariant(m.Files))
+                .Where(m => !IsLegitimate4KVariant(m.Files))
                 .ToList();
 
             foreach (DuplicateMovie movie in filteredMovies)
@@ -531,18 +525,12 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
                     episodeDict[metadataItemId] = episode;
                 }
 
-                episode.Files.Add(new MediaFileDetail
-                {
-                    FilePath = row.FilePath ?? string.Empty,
-                    SizeGb = (double)(row.SizeGb ?? 0),
-                    Width = (int)(row.Width ?? 0),
-                    Height = (int)(row.Height ?? 0)
-                });
+                episode.Files.Add(CreateMediaFileDetailFromRow(row));
             }
 
             // Filter out episodes with exactly 2 files where one is 4K and the other is not
             List<DuplicateEpisode> filteredEpisodes = episodeDict.Values
-                .Where(e => !this.IsLegitimate4KVariant(e.Files))
+                .Where(e => !IsLegitimate4KVariant(e.Files))
                 .ToList();
 
             foreach (DuplicateEpisode episode in filteredEpisodes)
@@ -560,9 +548,23 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
     }
 
     /// <summary>
+    /// Creates a MediaFileDetail instance from a dynamic database row.
+    /// </summary>
+    private static MediaFileDetail CreateMediaFileDetailFromRow(dynamic row)
+    {
+        return new MediaFileDetail
+        {
+            FilePath = row.FilePath ?? string.Empty,
+            SizeGb = (double)(row.SizeGb ?? 0),
+            Width = (int)(row.Width ?? 0),
+            Height = (int)(row.Height ?? 0)
+        };
+    }
+
+    /// <summary>
     /// Determines if a set of files represents a legitimate 4K variant (exactly 2 files: one 4K, one non-4K).
     /// </summary>
-    private bool IsLegitimate4KVariant(List<MediaFileDetail> files)
+    private static bool IsLegitimate4KVariant(List<MediaFileDetail> files)
     {
         if (files.Count != 2)
         {
