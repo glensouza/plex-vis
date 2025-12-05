@@ -178,36 +178,36 @@ public partial class PlexDataService
             WITH 
             ShowVelocity AS (
                 SELECT 
-                    show.id AS ShowID,
-                    show.title AS ShowTitle,
+                    tvshow.id AS ShowID,
+                    tvshow.title AS ShowTitle,
                     AVG(settings.last_viewed_at - strftime('%s', episode.originally_available_at)) AS AvgLagSeconds
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
-                JOIN metadata_items show ON season.parent_id = show.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND settings.view_count > 0
                   AND episode.originally_available_at IS NOT NULL
                   AND settings.last_viewed_at IS NOT NULL
                   AND settings.last_viewed_at >= strftime('%s', episode.originally_available_at)
-                GROUP BY show.id
+                GROUP BY tvshow.id
             ),
             NextEpisodes AS (
                 SELECT 
-                    show.id AS ShowID,
-                    show.title AS ShowTitle,
+                    tvshow.id AS ShowID,
+                    tvshow.title AS ShowTitle,
                     season."index" AS SeasonNum,
                     episode."index" AS EpisodeNum,
                     episode.title AS EpisodeTitle,
                     MIN(season."index" * 1000 + episode."index") as GlobalIndex
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
-                JOIN metadata_items show ON season.parent_id = show.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
                   AND episode.originally_available_at IS NOT NULL
-                GROUP BY show.id
+                GROUP BY tvshow.id
             )
             SELECT 
                 v.ShowTitle,
