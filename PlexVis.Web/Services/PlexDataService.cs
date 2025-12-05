@@ -176,22 +176,33 @@ public partial class PlexDataService
 
         const string sql = """
             WITH 
-            ShowVelocity AS (
+            -- Calculate lag for ALL episodes (watched and unwatched)
+            -- Watched: time from added_at to last_viewed_at
+            -- Unwatched: time from added_at to now (treating today as the "watch" date)
+            AllEpisodeLag AS (
                 SELECT 
                     tvshow.id AS ShowID,
                     tvshow.title AS ShowTitle,
-                    AVG(settings.last_viewed_at - episode.added_at) AS AvgLagSeconds,
-                    MAX(settings.last_viewed_at) AS LastWatchedAt
+                    CASE 
+                        WHEN settings.view_count > 0 AND settings.last_viewed_at IS NOT NULL 
+                        THEN settings.last_viewed_at - episode.added_at
+                        ELSE strftime('%s', 'now') - episode.added_at
+                    END AS LagSeconds
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
-                JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
-                  AND settings.view_count > 0
                   AND episode.added_at IS NOT NULL
-                  AND settings.last_viewed_at IS NOT NULL
-                  AND settings.last_viewed_at > episode.added_at
-                GROUP BY tvshow.id
+            ),
+            ShowVelocity AS (
+                SELECT 
+                    ShowID,
+                    ShowTitle,
+                    AVG(LagSeconds) AS AvgLagSeconds
+                FROM AllEpisodeLag
+                WHERE LagSeconds > 0
+                GROUP BY ShowID
             ),
             NextEpisodes AS (
                 SELECT 
@@ -217,7 +228,7 @@ public partial class PlexDataService
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
             INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
-            ORDER BY v.LastWatchedAt DESC
+            ORDER BY v.AvgLagSeconds ASC
             LIMIT 20;
             """;
 
