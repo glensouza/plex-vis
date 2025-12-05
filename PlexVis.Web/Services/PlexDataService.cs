@@ -191,7 +191,6 @@ public partial class PlexDataService
                   AND settings.last_viewed_at IS NOT NULL
                   AND settings.last_viewed_at > episode.added_at
                 GROUP BY tvshow.id
-                HAVING AVG(settings.last_viewed_at - episode.added_at) > 0
             ),
             NextEpisodes AS (
                 SELECT 
