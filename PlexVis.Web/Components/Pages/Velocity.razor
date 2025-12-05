@@ -107,6 +107,7 @@
     private IEnumerable<PlexAccount> accounts = [];
     private int? selectedAccountId;
     private bool isLoading;
+    private CancellationTokenSource? filterCancellationTokenSource;
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,6 +120,10 @@
 
     private async Task OnUserFilterChangedAsync(ChangeEventArgs e)
     {
+        filterCancellationTokenSource?.Cancel();
+        filterCancellationTokenSource = new CancellationTokenSource();
+        CancellationToken token = filterCancellationTokenSource.Token;
+
         string? value = e.Value?.ToString();
         if (string.IsNullOrEmpty(value))
         {
@@ -138,12 +143,19 @@
 
         try
         {
-            velocityItems = await PlexData.GetViewingVelocityAsync(selectedAccountId);
+            IEnumerable<ShowVelocity> results = await PlexData.GetViewingVelocityAsync(selectedAccountId);
+            if (!token.IsCancellationRequested)
+            {
+                velocityItems = results;
+            }
         }
         finally
         {
-            isLoading = false;
-            StateHasChanged();
+            if (!token.IsCancellationRequested)
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
         }
     }
 }
