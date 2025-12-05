@@ -7,20 +7,13 @@ using PlexVis.Web.Models;
 
 namespace PlexVis.Web.Services;
 
-public partial class PlexDataService
+public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogger<PlexDataService> plexLogger)
 {
-    private readonly PlexSettings settings;
-    private readonly ILogger<PlexDataService> logger;
-    private readonly object cacheLock = new();
+    private readonly PlexSettings settings = plexSettings.Value;
+    private readonly Lock cacheLock = new();
     private string? cachedDatabasePath;
     private DateTime cacheTimestamp;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
-
-    public PlexDataService(IOptions<PlexSettings> plexSettings, ILogger<PlexDataService> plexLogger)
-    {
-        this.settings = plexSettings.Value;
-        this.logger = plexLogger;
-    }
 
     /// <summary>
     /// Gets the path to the database file to use.
@@ -38,37 +31,40 @@ public partial class PlexDataService
         }
 
         // If a directory is specified, discover the latest backup
-        if (!string.IsNullOrEmpty(this.settings.DatabaseDirectory) && Directory.Exists(this.settings.DatabaseDirectory))
+        if (string.IsNullOrEmpty(this.settings.DatabaseDirectory) || !Directory.Exists(this.settings.DatabaseDirectory))
         {
-            lock (this.cacheLock)
-            {
-                // Invalidate cache if expired
-                if (this.cachedDatabasePath != null && DateTime.UtcNow - this.cacheTimestamp > CacheExpiration)
-                {
-                    this.logger.LogDebug("Database path cache expired, refreshing");
-                    this.cachedDatabasePath = null;
-                }
-
-                if (this.cachedDatabasePath == null)
-                {
-                    string? discoveredPath = this.DiscoverLatestBackupDatabase(this.settings.DatabaseDirectory);
-                    if (discoveredPath != null)
-                    {
-                        this.cachedDatabasePath = discoveredPath;
-                        this.cacheTimestamp = DateTime.UtcNow;
-                    }
-                    else
-                    {
-                        // Do not update cacheTimestamp; retry discovery on next call
-                        this.logger.LogDebug("No backup database found; will retry discovery on next call.");
-                    }
-                }
-
-                return this.cachedDatabasePath;
-            }
+            return null;
         }
 
-        return null;
+        lock (this.cacheLock)
+        {
+            // Invalidate cache if expired
+            if (this.cachedDatabasePath != null && DateTime.UtcNow - this.cacheTimestamp > CacheExpiration)
+            {
+                plexLogger.LogDebug("Database path cache expired, refreshing");
+                this.cachedDatabasePath = null;
+            }
+
+            if (this.cachedDatabasePath != null)
+            {
+                return this.cachedDatabasePath;
+            }
+
+            string? discoveredPath = this.DiscoverLatestBackupDatabase(this.settings.DatabaseDirectory);
+            if (discoveredPath != null)
+            {
+                this.cachedDatabasePath = discoveredPath;
+                this.cacheTimestamp = DateTime.UtcNow;
+            }
+            else
+            {
+                // Do not update cacheTimestamp; retry discovery on next call
+                plexLogger.LogDebug("No backup database found; will retry discovery on next call.");
+            }
+
+            return this.cachedDatabasePath;
+        }
+
     }
 
     /// <summary>
@@ -80,7 +76,7 @@ public partial class PlexDataService
         lock (this.cacheLock)
         {
             this.cachedDatabasePath = null;
-            this.logger.LogInformation("Database path cache cleared");
+            plexLogger.LogInformation("Database path cache cleared");
         }
     }
 
@@ -99,7 +95,7 @@ public partial class PlexDataService
 
             if (backupFiles.Length == 0)
             {
-                this.logger.LogWarning("No backup database files found in directory: {Directory}", directory);
+                plexLogger.LogWarning("No backup database files found in directory: {Directory}", directory);
                 return null;
             }
 
@@ -114,21 +110,22 @@ public partial class PlexDataService
 
             if (string.IsNullOrEmpty(latestBackup))
             {
-                this.logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
+                plexLogger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
                 return null;
             }
 
-            this.logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
-            if (!File.Exists(latestBackup))
+            plexLogger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            if (File.Exists(latestBackup))
             {
-                this.logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
-                return null;
+                return latestBackup;
             }
-            return latestBackup;
+
+            plexLogger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
+            return null;
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
+            plexLogger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
             return null;
         }
     }
@@ -148,11 +145,11 @@ public partial class PlexDataService
     /// Note: This property calls GetDatabasePath() which may perform file system operations
     /// on cache miss or expiration. Results are cached for 1 hour.
     /// </summary>
-    public bool IsDatabaseConfigured => GetDatabasePath() != null;
+    public bool IsDatabaseConfigured => this.GetDatabasePath() != null;
 
     private SqliteConnection CreateConnection()
     {
-        string? databasePath = GetDatabasePath();
+        string? databasePath = this.GetDatabasePath();
         if (string.IsNullOrEmpty(databasePath))
         {
             throw new InvalidOperationException("Database path is not configured or database file not found.");
@@ -166,15 +163,60 @@ public partial class PlexDataService
         return new SqliteConnection(builder.ConnectionString);
     }
 
-    public async Task<IEnumerable<ShowVelocity>> GetViewingVelocityAsync()
+    /// <summary>
+    /// Gets all Plex user accounts from the database.
+    /// </summary>
+    /// <returns>A collection of PlexAccount objects representing available user accounts.</returns>
+    public async Task<IEnumerable<PlexAccount>> GetAccountsAsync()
     {
         if (!this.IsDatabaseConfigured)
         {
-            this.logger.LogWarning("Plex database not configured or not found");
+            plexLogger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
         const string sql = """
+            SELECT DISTINCT 
+                account_id AS Id,
+                COALESCE(
+                    (SELECT name FROM accounts WHERE id = metadata_item_settings.account_id),
+                    'User ' || account_id
+                ) AS Name
+            FROM metadata_item_settings
+            WHERE account_id IS NOT NULL
+            ORDER BY Name;
+            """;
+
+        try
+        {
+            await using SqliteConnection connection = this.CreateConnection();
+            IEnumerable<PlexAccount> results = await connection.QueryAsync<PlexAccount>(sql);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            plexLogger.LogError(ex, "Error querying Plex accounts");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Gets viewing velocity data for TV shows, optionally filtered by account.
+    /// </summary>
+    /// <param name="accountId">Optional account ID to filter results. If null, shows data for all accounts.</param>
+    /// <returns>A collection of ShowVelocity objects representing viewing velocity for shows.</returns>
+    public async Task<IEnumerable<ShowVelocity>> GetViewingVelocityAsync(int? accountId = null)
+    {
+        if (!this.IsDatabaseConfigured)
+        {
+            plexLogger.LogWarning("Plex database not configured or not found");
+            return [];
+        }
+
+        string accountFilter = accountId.HasValue ? "AND settings.account_id = @AccountId" : "";
+        string accountJoinFilter = accountId.HasValue ? "AND settings.account_id = @AccountId" : "";
+
+        string sql = $"""
             WITH 
             -- Shows that have at least one watched episode
             ShowsWithWatchedEpisodes AS (
@@ -185,6 +227,7 @@ public partial class PlexDataService
                 JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND settings.view_count > 0
+                  {accountFilter}
             ),
             -- Calculate lag for ALL episodes (watched and unwatched)
             -- Watched: time from added_at to last_viewed_at
@@ -202,6 +245,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                    {accountJoinFilter}
                 WHERE episode.metadata_type = 4
                   AND episode.added_at IS NOT NULL
             ),
@@ -227,6 +271,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                    {accountJoinFilter}
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
                 GROUP BY tvshow.id
@@ -249,12 +294,12 @@ public partial class PlexDataService
         try
         {
             await using SqliteConnection connection = this.CreateConnection();
-            IEnumerable<ShowVelocity> results = await connection.QueryAsync<ShowVelocity>(sql);
+            IEnumerable<ShowVelocity> results = await connection.QueryAsync<ShowVelocity>(sql, new { AccountId = accountId });
             return results;
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Error querying viewing velocity");
+            plexLogger.LogError(ex, "Error querying viewing velocity");
             return [];
         }
     }
@@ -263,7 +308,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            this.logger.LogWarning("Plex database not configured or not found");
+            plexLogger.LogWarning("Plex database not configured or not found");
             return new LibraryStats();
         }
 
@@ -289,7 +334,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Error querying library stats");
+            plexLogger.LogError(ex, "Error querying library stats");
             return new LibraryStats();
         }
     }
@@ -298,7 +343,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            this.logger.LogWarning("Plex database not configured or not found");
+            plexLogger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -323,7 +368,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            this.logger.LogError(ex, "Error querying recently watched");
+            plexLogger.LogError(ex, "Error querying recently watched");
             return [];
         }
     }

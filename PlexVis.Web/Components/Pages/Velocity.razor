@@ -3,6 +3,8 @@
 @using PlexVis.Web.Services
 @inject PlexDataService PlexData
 
+@rendermode InteractiveServer
+
 <PageTitle>PlexVis - Viewing Velocity</PageTitle>
 
 <div class="page-container">
@@ -19,7 +21,25 @@
             <a href="/" class="btn-primary">Go to Dashboard</a>
         </div>
     }
-    else if (velocityItems.Any())
+    else
+    {
+        <div class="filter-section">
+            <label for="userFilter" class="filter-label">👤 Filter by User:</label>
+            <select id="userFilter" class="user-filter-dropdown" @onchange="OnUserFilterChangedAsync" disabled="@isLoading">
+                <option value="">All Users</option>
+                @foreach (PlexAccount account in accounts)
+                {
+                    <option value="@account.Id" selected="@(selectedAccountId == account.Id)">@account.Name</option>
+                }
+            </select>
+            @if (isLoading)
+            {
+                <span class="loading-indicator">Loading...</span>
+            }
+        </div>
+    }
+
+    @if (PlexData.IsDatabaseConfigured && velocityItems.Any())
     {
         <div class="velocity-table-container">
             <table class="velocity-table">
@@ -72,7 +92,7 @@
             </div>
         </div>
     }
-    else
+    else if (PlexData.IsDatabaseConfigured)
     {
         <div class="empty-state">
             <div class="empty-icon">📺</div>
@@ -84,12 +104,58 @@
 
 @code {
     private IEnumerable<ShowVelocity> velocityItems = [];
+    private IEnumerable<PlexAccount> accounts = [];
+    private int? selectedAccountId;
+    private bool isLoading;
+    private CancellationTokenSource? filterCancellationTokenSource;
 
     protected override async Task OnInitializedAsync()
     {
         if (PlexData.IsDatabaseConfigured)
         {
+            accounts = await PlexData.GetAccountsAsync();
             velocityItems = await PlexData.GetViewingVelocityAsync();
+        }
+    }
+
+    private async Task OnUserFilterChangedAsync(ChangeEventArgs e)
+    {
+        filterCancellationTokenSource?.Cancel();
+        filterCancellationTokenSource = new CancellationTokenSource();
+        CancellationToken token = filterCancellationTokenSource.Token;
+
+        string? value = e.Value?.ToString();
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedAccountId = null;
+        }
+        else if (int.TryParse(value, out int accountId))
+        {
+            selectedAccountId = accountId;
+        }
+        else
+        {
+            selectedAccountId = null;
+        }
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            IEnumerable<ShowVelocity> results = await PlexData.GetViewingVelocityAsync(selectedAccountId);
+            if (!token.IsCancellationRequested)
+            {
+                velocityItems = results;
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
         }
     }
 }

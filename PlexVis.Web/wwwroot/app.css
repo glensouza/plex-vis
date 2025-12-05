@@ -789,3 +789,75 @@ pre code {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   User Filter Dropdown
+   ========================================== */
+
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.user-filter-dropdown {
+    flex: 1;
+    max-width: 300px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-filter-dropdown:hover {
+    border-color: var(--plex-orange);
+}
+
+.user-filter-dropdown:focus {
+    outline: none;
+    border-color: var(--plex-orange);
+    box-shadow: 0 0 0 3px rgba(229, 160, 13, 0.2);
+}
+
+.user-filter-dropdown:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.user-filter-dropdown option {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    padding: 0.5rem;
+}
+
+.loading-indicator {
+    color: var(--plex-orange);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .user-filter-dropdown {
+        max-width: 100%;
+    }
+}
