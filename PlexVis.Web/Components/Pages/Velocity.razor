@@ -23,13 +23,17 @@
     {
         <div class="filter-section">
             <label for="userFilter" class="filter-label">👤 Filter by User:</label>
-            <select id="userFilter" class="user-filter-dropdown" @onchange="OnUserFilterChangedAsync">
+            <select id="userFilter" class="user-filter-dropdown" @onchange="OnUserFilterChangedAsync" disabled="@isLoading">
                 <option value="">All Users</option>
                 @foreach (PlexAccount account in accounts)
                 {
                     <option value="@account.Id" selected="@(selectedAccountId == account.Id)">@account.Name</option>
                 }
             </select>
+            @if (isLoading)
+            {
+                <span class="loading-indicator">Loading...</span>
+            }
         </div>
     }
 
@@ -100,6 +104,7 @@
     private IEnumerable<ShowVelocity> velocityItems = [];
     private IEnumerable<PlexAccount> accounts = [];
     private int? selectedAccountId;
+    private bool isLoading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,6 +130,18 @@
         {
             selectedAccountId = null;
         }
-        velocityItems = await PlexData.GetViewingVelocityAsync(selectedAccountId);
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            velocityItems = await PlexData.GetViewingVelocityAsync(selectedAccountId);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 }

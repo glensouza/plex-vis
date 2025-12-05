@@ -834,10 +834,21 @@ pre code {
     box-shadow: 0 0 0 3px rgba(229, 160, 13, 0.2);
 }
 
+.user-filter-dropdown:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .user-filter-dropdown option {
     background-color: var(--bg-elevated);
     color: var(--text-primary);
     padding: 0.5rem;
+}
+
+.loading-indicator {
+    color: var(--plex-orange);
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 @media (max-width: 768px) {
