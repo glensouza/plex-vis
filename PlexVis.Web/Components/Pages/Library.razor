@@ -26,15 +26,15 @@
                 <h2>🎬 Movies</h2>
                 <div class="stat-row">
                     <div class="stat-block">
-                        <div class="stat-number">@stats.TotalMovies</div>
+                        <div class="stat-number">@stats.TotalMovies.ToString("N0")</div>
                         <div class="stat-name">Total Movies</div>
                     </div>
                     <div class="stat-block">
-                        <div class="stat-number">@stats.WatchedMovies</div>
+                        <div class="stat-number">@stats.WatchedMovies.ToString("N0")</div>
                         <div class="stat-name">Watched</div>
                     </div>
                     <div class="stat-block">
-                        <div class="stat-number">@(stats.TotalMovies - stats.WatchedMovies)</div>
+                        <div class="stat-number">@((stats.TotalMovies - stats.WatchedMovies).ToString("N0"))</div>
                         <div class="stat-name">Unwatched</div>
                     </div>
                 </div>
@@ -48,15 +48,15 @@
                 <h2>📺 TV Shows</h2>
                 <div class="stat-row">
                     <div class="stat-block">
-                        <div class="stat-number">@stats.TotalShows</div>
+                        <div class="stat-number">@stats.TotalShows.ToString("N0")</div>
                         <div class="stat-name">Total Shows</div>
                     </div>
                     <div class="stat-block">
-                        <div class="stat-number">@stats.TotalEpisodes</div>
+                        <div class="stat-number">@stats.TotalEpisodes.ToString("N0")</div>
                         <div class="stat-name">Total Episodes</div>
                     </div>
                     <div class="stat-block">
-                        <div class="stat-number">@stats.WatchedEpisodes</div>
+                        <div class="stat-number">@stats.WatchedEpisodes.ToString("N0")</div>
                         <div class="stat-name">Episodes Watched</div>
                     </div>
                 </div>

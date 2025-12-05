@@ -65,7 +65,7 @@
                             <div class="velocity-card @item.CardClass">
                                 <div class="velocity-info">
                                     <div class="show-title">@item.ShowTitle</div>
-                                    <div class="episode-info">S@item.SeasonNum E@item.EpisodeNum - @item.EpisodeTitle</div>
+                                    <div class="episode-info">S@(item.SeasonNum) E@(item.EpisodeNum) - @(item.EpisodeTitle)</div>
                                 </div>
                                 <div class="velocity-days metric-value">@item.AvgDaysToWatch.ToString("N1")d</div>
                                 <div class="velocity-badge @item.VelocityClass">
@@ -134,7 +134,6 @@
 
     private string GetWatchPercentage()
     {
-        if (stats.TotalEpisodes == 0) return "0";
-        return ((double)stats.WatchedEpisodes / stats.TotalEpisodes * 100).ToString("N1");
+        return stats.TotalEpisodes == 0 ? "0" : ((double)stats.WatchedEpisodes / stats.TotalEpisodes * 100).ToString("N1");
     }
 }
