@@ -180,17 +180,18 @@ public partial class PlexDataService
                 SELECT 
                     tvshow.id AS ShowID,
                     tvshow.title AS ShowTitle,
-                    AVG(settings.last_viewed_at - strftime('%s', episode.originally_available_at)) AS AvgLagSeconds
+                    AVG(settings.last_viewed_at - episode.added_at) AS AvgLagSeconds
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND settings.view_count > 0
-                  AND episode.originally_available_at IS NOT NULL
+                  AND episode.added_at IS NOT NULL
                   AND settings.last_viewed_at IS NOT NULL
-                  AND settings.last_viewed_at >= strftime('%s', episode.originally_available_at)
+                  AND settings.last_viewed_at > episode.added_at
                 GROUP BY tvshow.id
+                HAVING AVG(settings.last_viewed_at - episode.added_at) > 0
             ),
             NextEpisodes AS (
                 SELECT 
@@ -206,7 +207,6 @@ public partial class PlexDataService
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
-                  AND episode.originally_available_at IS NOT NULL
                 GROUP BY tvshow.id
             )
             SELECT 
