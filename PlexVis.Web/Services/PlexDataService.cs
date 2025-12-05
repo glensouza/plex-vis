@@ -372,4 +372,114 @@ public partial class PlexDataService(IOptions<PlexSettings> plexSettings, ILogge
             return [];
         }
     }
+
+    /// <summary>
+    /// Gets movies that have multiple video files (potential duplicates).
+    /// </summary>
+    /// <returns>A collection of DuplicateMovie objects with file counts.</returns>
+    public async Task<IEnumerable<DuplicateMovie>> GetDuplicateMoviesAsync()
+    {
+        if (!this.IsDatabaseConfigured)
+        {
+            plexLogger.LogWarning("Plex database not configured or not found");
+            return [];
+        }
+
+        const string sql = """
+            SELECT 
+                m.title AS Title, 
+                COUNT(p.id) as FileCount
+            FROM metadata_items m
+            JOIN media_items i ON m.id = i.metadata_item_id
+            JOIN media_parts p ON i.id = p.media_item_id
+            WHERE m.metadata_type = 1
+            GROUP BY m.id
+            HAVING COUNT(p.id) > 1
+            ORDER BY FileCount DESC;
+            """;
+
+        try
+        {
+            await using SqliteConnection connection = this.CreateConnection();
+            IEnumerable<DuplicateMovie> results = await connection.QueryAsync<DuplicateMovie>(sql);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            plexLogger.LogError(ex, "Error querying duplicate movies");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Gets items that Plex sees but hasn't matched to an agent (local:// items).
+    /// </summary>
+    /// <returns>A collection of UnmatchedItem objects.</returns>
+    public async Task<IEnumerable<UnmatchedItem>> GetUnmatchedItemsAsync()
+    {
+        if (!this.IsDatabaseConfigured)
+        {
+            plexLogger.LogWarning("Plex database not configured or not found");
+            return [];
+        }
+
+        const string sql = """
+            SELECT 
+                id AS Id, 
+                title AS Title, 
+                datetime(added_at, 'unixepoch', 'localtime') AS AddedAt
+            FROM metadata_items 
+            WHERE guid LIKE 'local://%' 
+            AND metadata_type IN (1, 2, 8)
+            ORDER BY added_at DESC;
+            """;
+
+        try
+        {
+            await using SqliteConnection connection = this.CreateConnection();
+            IEnumerable<UnmatchedItem> results = await connection.QueryAsync<UnmatchedItem>(sql);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            plexLogger.LogError(ex, "Error querying unmatched items");
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Gets items marked as soft-deleted in the Plex database.
+    /// </summary>
+    /// <returns>A collection of SoftDeletedItem objects.</returns>
+    public async Task<IEnumerable<SoftDeletedItem>> GetSoftDeletedItemsAsync()
+    {
+        if (!this.IsDatabaseConfigured)
+        {
+            plexLogger.LogWarning("Plex database not configured or not found");
+            return [];
+        }
+
+        const string sql = """
+            SELECT 
+                id AS Id, 
+                title AS Title,
+                metadata_type AS MetadataType,
+                datetime(deleted_at, 'unixepoch', 'localtime') AS DeletedAt
+            FROM metadata_items 
+            WHERE deleted_at IS NOT NULL
+            ORDER BY deleted_at DESC;
+            """;
+
+        try
+        {
+            await using SqliteConnection connection = this.CreateConnection();
+            IEnumerable<SoftDeletedItem> results = await connection.QueryAsync<SoftDeletedItem>(sql);
+            return results;
+        }
+        catch (Exception ex)
+        {
+            plexLogger.LogError(ex, "Error querying soft-deleted items");
+            return [];
+        }
+    }
 }
