@@ -51,10 +51,11 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 - Prefer **file-scoped namespaces** for new files.
 - Prefer **using declarations** (`using var stream = ...;`) or `using` statements to ensure proper disposal of `IDisposable` objects.
 - **Order using directives**: `System.*`, `Microsoft.*`, third-party, then project namespaces. Remove unused usings.
-- **No variables should start with underscore.** Use camelCase for private variables (e.g., `logger`, `settings`). **Always access private instance fields with `this.` prefix** (e.g., `this.logger`, `this.settings`).
+- Use primary constructors whenever possible.
+- **No fields should start with underscore.** Use camelCase for private fields (e.g., `logger`, `settings`). **Always access private instance fields with `this.` prefix** (e.g., `this.logger`, `this.settings`). Only exception are those parameters from primary constructors.
 - **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
 - **Avoid `object` type.** Use explicit types or appropriate interfaces instead if possible.
-- **Avoid unnecessary line wrapping in simple expressions.** Keep simple statements on a single line, but wrap long or complex logic to maintain readability. Adhere to a maximum line length of 120 characters unless an exception is required for clarity.
+- **Avoid unnecessary line wrapping in simple expressions.** Keep simple statements on a single line, but wrap long or complex logic to maintain readability. Adhere to a maximum line length of 900 characters unless an exception is required for clarity.
 - **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
 - Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
 - Keep methods focused and single-purpose. Favor small, testable methods.
