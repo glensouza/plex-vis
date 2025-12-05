@@ -191,8 +191,6 @@ public partial class PlexDataService
                   AND episode.added_at IS NOT NULL
                   AND settings.last_viewed_at IS NOT NULL
                   AND settings.last_viewed_at > episode.added_at
-                  -- Only consider episodes watched in the last 90 days (90 * 24 * 60 * 60 = 7776000 seconds)
-                  AND settings.last_viewed_at > (strftime('%s', 'now') - 7776000)
                 GROUP BY tvshow.id
             ),
             NextEpisodes AS (
@@ -219,7 +217,7 @@ public partial class PlexDataService
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
             INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
-            ORDER BY v.LastWatchedAt DESC, AvgDaysToWatch ASC
+            ORDER BY v.LastWatchedAt DESC
             LIMIT 20;
             """;
 
