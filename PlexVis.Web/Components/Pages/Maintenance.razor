@@ -384,6 +384,12 @@
     private IEnumerable<UnmatchedItem> unmatchedItems = [];
     private IEnumerable<SoftDeletedItem> softDeletedItems = [];
 
+    // Track loaded state to avoid re-querying when results are empty
+    private bool duplicateMoviesLoaded;
+    private bool duplicateEpisodesLoaded;
+    private bool unmatchedItemsLoaded;
+    private bool softDeletedItemsLoaded;
+
     // Modal state
     private bool showMovieModal;
     private bool showEpisodeModal;
@@ -537,27 +543,31 @@
             switch (this.activeTab)
             {
                 case "duplicates":
-                    if (!this.duplicateMovies.Any())
+                    if (!this.duplicateMoviesLoaded)
                     {
                         this.duplicateMovies = await PlexData.GetDuplicateMoviesAsync();
+                        this.duplicateMoviesLoaded = true;
                     }
                     break;
                 case "duplicateEpisodes":
-                    if (!this.duplicateEpisodes.Any())
+                    if (!this.duplicateEpisodesLoaded)
                     {
                         this.duplicateEpisodes = await PlexData.GetDuplicateEpisodesAsync();
+                        this.duplicateEpisodesLoaded = true;
                     }
                     break;
                 case "unmatched":
-                    if (!this.unmatchedItems.Any())
+                    if (!this.unmatchedItemsLoaded)
                     {
                         this.unmatchedItems = await PlexData.GetUnmatchedItemsAsync();
+                        this.unmatchedItemsLoaded = true;
                     }
                     break;
                 case "deleted":
-                    if (!this.softDeletedItems.Any())
+                    if (!this.softDeletedItemsLoaded)
                     {
                         this.softDeletedItems = await PlexData.GetSoftDeletedItemsAsync();
+                        this.softDeletedItemsLoaded = true;
                     }
                     break;
             }
