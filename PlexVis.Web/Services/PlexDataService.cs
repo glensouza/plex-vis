@@ -180,7 +180,8 @@ public partial class PlexDataService
                 SELECT 
                     tvshow.id AS ShowID,
                     tvshow.title AS ShowTitle,
-                    AVG(settings.last_viewed_at - episode.added_at) AS AvgLagSeconds
+                    AVG(settings.last_viewed_at - episode.added_at) AS AvgLagSeconds,
+                    MAX(settings.last_viewed_at) AS LastWatchedAt
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
@@ -190,6 +191,7 @@ public partial class PlexDataService
                   AND episode.added_at IS NOT NULL
                   AND settings.last_viewed_at IS NOT NULL
                   AND settings.last_viewed_at > episode.added_at
+                  AND settings.last_viewed_at > (strftime('%s', 'now') - 7776000)
                 GROUP BY tvshow.id
             ),
             NextEpisodes AS (
@@ -216,7 +218,7 @@ public partial class PlexDataService
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
             INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
-            ORDER BY AvgDaysToWatch ASC
+            ORDER BY v.LastWatchedAt DESC, AvgDaysToWatch ASC
             LIMIT 20;
             """;
 
