@@ -210,12 +210,12 @@ public partial class PlexDataService
             )
             SELECT 
                 v.ShowTitle,
-                COALESCE(n.SeasonNum, 0) AS SeasonNum,
-                COALESCE(n.EpisodeNum, 0) AS EpisodeNum,
-                COALESCE(n.EpisodeTitle, 'All caught up!') AS EpisodeTitle,
+                n.SeasonNum,
+                n.EpisodeNum,
+                n.EpisodeTitle,
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
-            LEFT JOIN NextEpisodes n ON v.ShowID = n.ShowID
+            INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
             ORDER BY AvgDaysToWatch ASC
             LIMIT 20;
             """;
