@@ -54,7 +54,7 @@ When contributing to this repository, please follow the guidelines in [CONTRIBUT
 - **No variables should start with underscore.** Use camelCase for private variables (e.g., `logger`, `settings`). **Always access private instance fields with `this.` prefix** (e.g., `this.logger`, `this.settings`).
 - **Do not use `dynamic`.** Use explicit types or appropriate interfaces instead.
 - **Avoid `object` type.** Use explicit types or appropriate interfaces instead if possible.
-- **Do not use wrap lines.** Keep logic for each execution in one line no matter how long it is.
+- **Avoid unnecessary line wrapping in simple expressions.** Keep simple statements on a single line, but wrap long or complex logic to maintain readability. Adhere to a maximum line length of 120 characters unless an exception is required for clarity.
 - **Require XML documentation** (`/// <summary>`) for public types and public members. Keep comments concise.
 - Use expression-bodied members only for simple one-line properties or methods; prefer full bodies for complex logic.
 - Keep methods focused and single-purpose. Favor small, testable methods.
