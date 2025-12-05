@@ -176,6 +176,16 @@ public partial class PlexDataService
 
         const string sql = """
             WITH 
+            -- Shows that have at least one watched episode
+            ShowsWithWatchedEpisodes AS (
+                SELECT DISTINCT tvshow.id AS ShowID
+                FROM metadata_items episode
+                JOIN metadata_items season ON episode.parent_id = season.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
+                JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                WHERE episode.metadata_type = 4
+                  AND settings.view_count > 0
+            ),
             -- Calculate lag for ALL episodes (watched and unwatched)
             -- Watched: time from added_at to last_viewed_at
             -- Unwatched: time from added_at to now (treating today as the "watch" date)
@@ -204,6 +214,7 @@ public partial class PlexDataService
                 WHERE LagSeconds >= 0
                 GROUP BY ShowID
             ),
+            -- Shows that have at least one unwatched episode (the next episode to watch)
             NextEpisodes AS (
                 SELECT 
                     tvshow.id AS ShowID,
@@ -227,7 +238,10 @@ public partial class PlexDataService
                 n.EpisodeTitle,
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
+            -- Must have at least one unwatched episode
             INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
+            -- Must have at least one watched episode
+            INNER JOIN ShowsWithWatchedEpisodes w ON v.ShowID = w.ShowID
             ORDER BY v.AvgLagSeconds ASC
             LIMIT 20;
             """;
