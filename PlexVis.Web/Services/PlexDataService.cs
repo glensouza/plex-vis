@@ -191,6 +191,7 @@ public partial class PlexDataService
                   AND episode.added_at IS NOT NULL
                   AND settings.last_viewed_at IS NOT NULL
                   AND settings.last_viewed_at > episode.added_at
+                  -- Only consider episodes watched in the last 90 days (90 * 24 * 60 * 60 = 7776000 seconds)
                   AND settings.last_viewed_at > (strftime('%s', 'now') - 7776000)
                 GROUP BY tvshow.id
             ),
