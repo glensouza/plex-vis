@@ -217,6 +217,7 @@ public partial class PlexDataService
         }
 
         string accountFilter = accountId.HasValue ? "AND settings.account_id = @AccountId" : "";
+        string accountJoinFilter = accountId.HasValue ? "AND settings.account_id = @AccountId" : "";
 
         string sql = $"""
             WITH 
@@ -247,7 +248,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
-                    {(accountId.HasValue ? "AND settings.account_id = @AccountId" : "")}
+                    {accountJoinFilter}
                 WHERE episode.metadata_type = 4
                   AND episode.added_at IS NOT NULL
             ),
@@ -273,7 +274,7 @@ public partial class PlexDataService
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
-                    {(accountId.HasValue ? "AND settings.account_id = @AccountId" : "")}
+                    {accountJoinFilter}
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
                 GROUP BY tvshow.id

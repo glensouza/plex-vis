@@ -113,7 +113,18 @@
     private async Task OnUserFilterChangedAsync(ChangeEventArgs e)
     {
         string? value = e.Value?.ToString();
-        selectedAccountId = string.IsNullOrEmpty(value) ? null : int.Parse(value);
+        if (string.IsNullOrEmpty(value))
+        {
+            selectedAccountId = null;
+        }
+        else if (int.TryParse(value, out int accountId))
+        {
+            selectedAccountId = accountId;
+        }
+        else
+        {
+            selectedAccountId = null;
+        }
         velocityItems = await PlexData.GetViewingVelocityAsync(selectedAccountId);
     }
 }
