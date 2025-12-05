@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Maintainers
+    url: https://github.com/glensouza/plex-vis#maintainers
+    about: "Contact project maintainers for private or sensitive issues"
