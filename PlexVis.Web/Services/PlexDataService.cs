@@ -9,17 +9,17 @@ namespace PlexVis.Web.Services;
 
 public partial class PlexDataService
 {
-    private readonly PlexSettings _settings;
-    private readonly ILogger<PlexDataService> _logger;
-    private readonly object _cacheLock = new();
-    private string? _cachedDatabasePath;
-    private DateTime _cacheTimestamp;
+    private readonly PlexSettings settings;
+    private readonly ILogger<PlexDataService> logger;
+    private readonly object cacheLock = new();
+    private string? cachedDatabasePath;
+    private DateTime cacheTimestamp;
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromHours(1);
 
-    public PlexDataService(IOptions<PlexSettings> settings, ILogger<PlexDataService> logger)
+    public PlexDataService(IOptions<PlexSettings> plexSettings, ILogger<PlexDataService> plexLogger)
     {
-        _settings = settings.Value;
-        _logger = logger;
+        this.settings = plexSettings.Value;
+        this.logger = plexLogger;
     }
 
     /// <summary>
@@ -32,39 +32,39 @@ public partial class PlexDataService
     public string? GetDatabasePath()
     {
         // If a direct path is specified and exists, use it
-        if (!string.IsNullOrEmpty(_settings.DatabasePath) && File.Exists(_settings.DatabasePath))
+        if (!string.IsNullOrEmpty(this.settings.DatabasePath) && File.Exists(this.settings.DatabasePath))
         {
-            return _settings.DatabasePath;
+            return this.settings.DatabasePath;
         }
 
         // If a directory is specified, discover the latest backup
-        if (!string.IsNullOrEmpty(_settings.DatabaseDirectory) && Directory.Exists(_settings.DatabaseDirectory))
+        if (!string.IsNullOrEmpty(this.settings.DatabaseDirectory) && Directory.Exists(this.settings.DatabaseDirectory))
         {
-            lock (_cacheLock)
+            lock (this.cacheLock)
             {
                 // Invalidate cache if expired
-                if (_cachedDatabasePath != null && DateTime.UtcNow - _cacheTimestamp > CacheExpiration)
+                if (this.cachedDatabasePath != null && DateTime.UtcNow - this.cacheTimestamp > CacheExpiration)
                 {
-                    _logger.LogDebug("Database path cache expired, refreshing");
-                    _cachedDatabasePath = null;
+                    this.logger.LogDebug("Database path cache expired, refreshing");
+                    this.cachedDatabasePath = null;
                 }
 
-                if (_cachedDatabasePath == null)
+                if (this.cachedDatabasePath == null)
                 {
-                    string? discoveredPath = DiscoverLatestBackupDatabase(_settings.DatabaseDirectory);
+                    string? discoveredPath = this.DiscoverLatestBackupDatabase(this.settings.DatabaseDirectory);
                     if (discoveredPath != null)
                     {
-                        _cachedDatabasePath = discoveredPath;
-                        _cacheTimestamp = DateTime.UtcNow;
+                        this.cachedDatabasePath = discoveredPath;
+                        this.cacheTimestamp = DateTime.UtcNow;
                     }
                     else
                     {
-                        // Do not update _cacheTimestamp; retry discovery on next call
-                        _logger.LogDebug("No backup database found; will retry discovery on next call.");
+                        // Do not update cacheTimestamp; retry discovery on next call
+                        this.logger.LogDebug("No backup database found; will retry discovery on next call.");
                     }
                 }
 
-                return _cachedDatabasePath;
+                return this.cachedDatabasePath;
             }
         }
 
@@ -77,10 +77,10 @@ public partial class PlexDataService
     /// </summary>
     public void RefreshDatabasePath()
     {
-        lock (_cacheLock)
+        lock (this.cacheLock)
         {
-            _cachedDatabasePath = null;
-            _logger.LogInformation("Database path cache cleared");
+            this.cachedDatabasePath = null;
+            this.logger.LogInformation("Database path cache cleared");
         }
     }
 
@@ -99,7 +99,7 @@ public partial class PlexDataService
 
             if (backupFiles.Length == 0)
             {
-                _logger.LogWarning("No backup database files found in directory: {Directory}", directory);
+                this.logger.LogWarning("No backup database files found in directory: {Directory}", directory);
                 return null;
             }
 
@@ -114,21 +114,21 @@ public partial class PlexDataService
 
             if (string.IsNullOrEmpty(latestBackup))
             {
-                _logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
+                this.logger.LogWarning("No valid backup database files with date pattern found in directory: {Directory}", directory);
                 return null;
             }
 
-            _logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
+            this.logger.LogInformation("Discovered latest backup database: {BackupPath}", latestBackup);
             if (!File.Exists(latestBackup))
             {
-                _logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
+                this.logger.LogWarning("Latest backup file does not exist: {BackupPath}", latestBackup);
                 return null;
             }
             return latestBackup;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
+            this.logger.LogError(ex, "Error discovering backup database files in directory: {Directory}", directory);
             return null;
         }
     }
@@ -170,44 +170,66 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            this.logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
         const string sql = """
             WITH 
-            ShowVelocity AS (
-                SELECT 
-                    show.id AS ShowID,
-                    show.title AS ShowTitle,
-                    AVG(settings.last_viewed_at - strftime('%s', episode.originally_available_at)) AS AvgLagSeconds
+            -- Shows that have at least one watched episode
+            ShowsWithWatchedEpisodes AS (
+                SELECT DISTINCT tvshow.id AS ShowID
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
-                JOIN metadata_items show ON season.parent_id = show.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND settings.view_count > 0
-                  AND episode.originally_available_at IS NOT NULL
-                  AND settings.last_viewed_at IS NOT NULL
-                  AND settings.last_viewed_at >= strftime('%s', episode.originally_available_at)
-                GROUP BY show.id
             ),
-            NextEpisodes AS (
+            -- Calculate lag for ALL episodes (watched and unwatched)
+            -- Watched: time from added_at to last_viewed_at
+            -- Unwatched: time from added_at to now (treating today as the "watch" date)
+            AllEpisodeLag AS (
                 SELECT 
-                    show.id AS ShowID,
-                    show.title AS ShowTitle,
-                    season.index AS SeasonNum,
-                    episode.index AS EpisodeNum,
-                    episode.title AS EpisodeTitle,
-                    MIN(season.index * 1000 + episode.index) as GlobalIndex
+                    tvshow.id AS ShowID,
+                    tvshow.title AS ShowTitle,
+                    CASE 
+                        WHEN settings.view_count > 0 AND settings.last_viewed_at IS NOT NULL 
+                        THEN settings.last_viewed_at - episode.added_at
+                        ELSE strftime('%s', 'now') - episode.added_at
+                    END AS LagSeconds
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
-                JOIN metadata_items show ON season.parent_id = show.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
+                LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
+                WHERE episode.metadata_type = 4
+                  AND episode.added_at IS NOT NULL
+            ),
+            ShowVelocity AS (
+                SELECT 
+                    ShowID,
+                    ShowTitle,
+                    AVG(LagSeconds) AS AvgLagSeconds
+                FROM AllEpisodeLag
+                WHERE LagSeconds >= 0
+                GROUP BY ShowID
+            ),
+            -- Shows that have at least one unwatched episode (the next episode to watch)
+            NextEpisodes AS (
+                SELECT 
+                    tvshow.id AS ShowID,
+                    tvshow.title AS ShowTitle,
+                    season."index" AS SeasonNum,
+                    episode."index" AS EpisodeNum,
+                    episode.title AS EpisodeTitle,
+                    MIN(season."index" * 1000 + episode."index") as GlobalIndex
+                FROM metadata_items episode
+                JOIN metadata_items season ON episode.parent_id = season.id
+                JOIN metadata_items tvshow ON season.parent_id = tvshow.id
                 LEFT JOIN metadata_item_settings settings ON episode.guid = settings.guid
                 WHERE episode.metadata_type = 4
                   AND (settings.view_count IS NULL OR settings.view_count = 0)
-                  AND episode.originally_available_at IS NOT NULL
-                GROUP BY show.id
+                GROUP BY tvshow.id
             )
             SELECT 
                 v.ShowTitle,
@@ -216,8 +238,11 @@ public partial class PlexDataService
                 n.EpisodeTitle,
                 ROUND(v.AvgLagSeconds / 86400.0, 1) AS AvgDaysToWatch
             FROM ShowVelocity v
-            JOIN NextEpisodes n ON v.ShowID = n.ShowID
-            ORDER BY AvgDaysToWatch ASC
+            -- Must have at least one unwatched episode
+            INNER JOIN NextEpisodes n ON v.ShowID = n.ShowID
+            -- Must have at least one watched episode
+            INNER JOIN ShowsWithWatchedEpisodes w ON v.ShowID = w.ShowID
+            ORDER BY v.AvgLagSeconds ASC
             LIMIT 20;
             """;
 
@@ -229,7 +254,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying viewing velocity");
+            this.logger.LogError(ex, "Error querying viewing velocity");
             return [];
         }
     }
@@ -238,7 +263,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            this.logger.LogWarning("Plex database not configured or not found");
             return new LibraryStats();
         }
 
@@ -264,7 +289,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying library stats");
+            this.logger.LogError(ex, "Error querying library stats");
             return new LibraryStats();
         }
     }
@@ -273,7 +298,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            this.logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -298,7 +323,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying recently watched");
+            this.logger.LogError(ex, "Error querying recently watched");
             return [];
         }
     }
