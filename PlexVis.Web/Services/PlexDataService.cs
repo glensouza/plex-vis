@@ -201,7 +201,7 @@ public partial class PlexDataService
                     ShowTitle,
                     AVG(LagSeconds) AS AvgLagSeconds
                 FROM AllEpisodeLag
-                WHERE LagSeconds > 0
+                WHERE LagSeconds >= 0
                 GROUP BY ShowID
             ),
             NextEpisodes AS (
