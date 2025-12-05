@@ -170,7 +170,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            _logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -196,10 +196,10 @@ public partial class PlexDataService
                 SELECT 
                     show.id AS ShowID,
                     show.title AS ShowTitle,
-                    season.index AS SeasonNum,
-                    episode.index AS EpisodeNum,
+                    season."index" AS SeasonNum,
+                    episode."index" AS EpisodeNum,
                     episode.title AS EpisodeTitle,
-                    MIN(season.index * 1000 + episode.index) as GlobalIndex
+                    MIN(season."index" * 1000 + episode."index") as GlobalIndex
                 FROM metadata_items episode
                 JOIN metadata_items season ON episode.parent_id = season.id
                 JOIN metadata_items show ON season.parent_id = show.id
@@ -229,7 +229,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying viewing velocity");
+            _logger.LogError(ex, "Error querying viewing velocity");
             return [];
         }
     }
@@ -238,7 +238,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            _logger.LogWarning("Plex database not configured or not found");
             return new LibraryStats();
         }
 
@@ -264,7 +264,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying library stats");
+            _logger.LogError(ex, "Error querying library stats");
             return new LibraryStats();
         }
     }
@@ -273,7 +273,7 @@ public partial class PlexDataService
     {
         if (!this.IsDatabaseConfigured)
         {
-            logger.LogWarning("Plex database not configured or not found");
+            _logger.LogWarning("Plex database not configured or not found");
             return [];
         }
 
@@ -298,7 +298,7 @@ public partial class PlexDataService
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error querying recently watched");
+            _logger.LogError(ex, "Error querying recently watched");
             return [];
         }
     }
