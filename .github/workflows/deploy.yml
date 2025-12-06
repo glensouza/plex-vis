@@ -46,24 +46,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           DATE=$(date +'%Y%m%d')
+          echo "Counting workflow runs for date $DATE on branch ${BRANCH}..."
 
-          echo "Counting existing releases for date $DATE..."
+          # Query workflow runs (first 100). This uses the Actions API instead of releases.
+          RUNS_JSON=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100&branch=${BRANCH}")
 
-          # Fetch recent releases (first 100)
-          RELEASES_JSON=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100")
+          # Extract created_at timestamps (ISO 8601) and count those matching today's date
+          CREATED_ATS=$(echo "$RUNS_JSON" | grep -oP '"created_at"\s*:\s*"\K[^"]+' || true)
 
-          # Extract tag_name values without requiring jq
-          TAGS=$(echo "$RELEASES_JSON" | grep -oP '"tag_name"\s*:\s*"\K[^"]+')
-
-          # Count tags that start with DATE.
           COUNT=0
-          if [ -n "$TAGS" ]; then
-            COUNT=$(echo "$TAGS" | grep -E "^${DATE}\." | wc -l | tr -d ' ')
+          if [ -n "$CREATED_ATS" ]; then
+            COUNT=$(echo "$CREATED_ATS" | while read -r dt; do echo "${dt:0:10}"; done | tr -d '-' | grep -x "$DATE" | wc -l | tr -d ' ')
           fi
 
-          # Increment for this build
           NEXT=$((COUNT + 1))
           BUILD_NUMBER="${DATE}.${NEXT}"
 
