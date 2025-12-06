@@ -1,5 +1,7 @@
 # Plex Velocity Visualizer
 
+[![Deploy PlexVis Direct](https://github.com/glensouza/plex-vis/actions/workflows/deploy.yml/badge.svg)](https://github.com/glensouza/plex-vis/actions/workflows/deploy.yml)
+
 Plex Velocity Visualizer is a .NET Blazor Server application that visualizes your Plex viewing habits with a specific focus on "Viewing Velocity" — a metric that tracks how quickly you watch shows after they air.
 
 Unlike the standard Plex "On Deck," which prioritizes what you watched last, this dashboard prioritizes shows based on your urgency (average lag time between Air Date and Watch Date).

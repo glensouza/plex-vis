@@ -19,7 +19,7 @@ concurrency:
 env:
   PUBLISH_DIR: './publish'
   DEPLOY_DIR: '/opt/plex-vis'
-  SERVICE_NAME: 'plex-vis'
+  SERVICE_NAME: 'plexvis'
 
 jobs:
   build:
@@ -162,9 +162,7 @@ jobs:
       - name: Stop application service
         run: |
           echo "Stopping ${{ env.SERVICE_NAME }} service..."
-          # Runner runs as pathfinder user with passwordless sudo configured
-          # TODO: HERE
-          ## sudo -n /usr/local/bin/pathfinder-deploy stop
+          systemctl stop ${{ env.SERVICE_NAME }}
           echo "Service stopped successfully"
       
       - name: Deploy application
@@ -183,48 +181,46 @@ jobs:
       - name: Start application service
         run: |
           echo "Starting ${{ env.SERVICE_NAME }} service..."
-          # TODO: HERE
-          ## sudo -n /usr/local/bin/pathfinder-deploy start
+          systemctl start ${{ env.SERVICE_NAME }}
           echo "Service start command executed"
 
           # Wait a short period for the service to become active
           sleep 5
         
           # Check if service is running
-          #TODO: HERE
-          ## if sudo -n /usr/local/bin/pathfinder-deploy is-active --quiet; then
-          ##     echo "Service started successfully"
-          ## else
-          ##     echo "Service failed to start. Checking logs..."
-          ##     # TODO: HERE
-          ##     sudo -n /usr/local/bin/pathfinder-deploy journal -n50 --no-pager || true
-          ##     exit 1
-          ## fi
+          if systemctl is-active --quiet ${{ env.SERVICE_NAME }}; then
+              echo "Service started successfully"
+          else
+              echo "Service failed to start. Checking logs..."
+              # TODO: HERE
+              journalctl -u ${{ env.SERVICE_NAME }} -n50 --no-pager || true
+              exit 1
+          fi
       
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
           
           # Wait for application to be ready
-          ## for i in {1..30}; do
-          ##   if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
-          ##     echo "Application is responding on /alive endpoint"
-          ##     break
-          ##   fi
-          ##   echo "Waiting for application to start... ($i/30)"
-          ##   sleep 2
-          ## done
+          for i in {1..30}; do
+            if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
+              echo "Application is responding on /alive endpoint"
+              break
+            fi
+            echo "Waiting for application to start... ($i/30)"
+            sleep 2
+          done
           
-          ## # Final health check
-          ## if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
-          ##   echo "✅ Deployment verification successful"
-          ##   echo "Application is healthy and responding"
-          ## else
-          ##   echo "❌ Deployment verification failed"
-          ##   echo "Application is not responding on health endpoint"
-          ##   sudo -n /usr/local/bin/pathfinder-deploy journal -n100 --no-pager || true
-          ##   exit 1
-          ## fi
+          # Final health check
+          if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
+            echo "✅ Deployment verification successful"
+            echo "Application is healthy and responding"
+          else
+            echo "❌ Deployment verification failed"
+            echo "Application is not responding on health endpoint"
+            journalctl -u ${{ env.SERVICE_NAME }} -n100 --no-pager || true
+            exit 1
+          fi
 
       - name: Create deployment summary
         run: |
@@ -239,8 +235,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Service Status" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
-          # TODO: HERE
-          ## sudo -n /usr/local/bin/pathfinder-deploy status --no-pager || true >> $GITHUB_STEP_SUMMARY
+          systemctl status ${{ env.SERVICE_NAME }} --no-pager || true >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
       
       - name: Cleanup old artifacts
@@ -277,29 +272,26 @@ jobs:
           echo "Rolling back to backup: ${{ steps.find_backup.outputs.backup_file }}"
           
           # Stop service
-          # TODO: HERE
-          ## sudo -n /usr/local/bin/pathfinder-deploy stop
+          systemctl stop ${{ env.SERVICE_NAME }}
           
           # Restore backup
           tar -xzf ${{ steps.find_backup.outputs.backup_file }} -C ${{ env.DEPLOY_DIR }}
           
           # Start service
-          # TODO: HERE
-          ## sudo -n /usr/local/bin/pathfinder-deploy start
+          systemctl start ${{ env.SERVICE_NAME }}
 
           echo "Rollback completed"
       
       - name: Verify rollback
         run: |
           sleep 5
-          # TODO: HERE
-          ## if sudo -n /usr/local/bin/pathfinder-deploy is-active --quiet; then
-          ##   echo "✅ Rollback successful - service is running"
-          ## else
-          ##   echo "❌ Rollback failed - service is not running"
-          ##   sudo -n /usr/local/bin/pathfinder-deploy journal -n50 --no-pager
-          ##   exit 1
-          ## fi
+          if systemctl is-active --quiet ${{ env.SERVICE_NAME }}; then
+            echo "✅ Rollback successful - service is running"
+          else
+            echo "❌ Rollback failed - service is not running"
+            journalctl -u ${{ env.SERVICE_NAME }} -n50 --no-pager
+            exit 1
+          fi
 
   notify:
     name: Send Notification
