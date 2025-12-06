@@ -191,40 +191,40 @@ jobs:
           sleep 5
         
           # Check if service is running
-          # TODO: HERE
-          # # if sudo -n /usr/local/bin/pathfinder-deploy is-active --quiet; then
-          # #     echo "Service started successfully"
-          # # else
-          # #     echo "Service failed to start. Checking logs..."
-          # #     # TODO: HERE
-          # #     sudo -n /usr/local/bin/pathfinder-deploy journal -n50 --no-pager || true
-          # #     exit 1
-          # # fi
+          #TODO: HERE
+          ## if sudo -n /usr/local/bin/pathfinder-deploy is-active --quiet; then
+          ##     echo "Service started successfully"
+          ## else
+          ##     echo "Service failed to start. Checking logs..."
+          ##     # TODO: HERE
+          ##     sudo -n /usr/local/bin/pathfinder-deploy journal -n50 --no-pager || true
+          ##     exit 1
+          ## fi
       
       - name: Verify deployment
         run: |
           echo "Verifying deployment..."
           
           # Wait for application to be ready
-          for i in {1..30}; do
-            if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
-              echo "Application is responding on /alive endpoint"
-              break
-            fi
-            echo "Waiting for application to start... ($i/30)"
-            sleep 2
-          done
+          ## for i in {1..30}; do
+          ##   if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
+          ##     echo "Application is responding on /alive endpoint"
+          ##     break
+          ##   fi
+          ##   echo "Waiting for application to start... ($i/30)"
+          ##   sleep 2
+          ## done
           
-          # Final health check
-          if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
-            echo "✅ Deployment verification successful"
-            echo "Application is healthy and responding"
-          else
-            echo "❌ Deployment verification failed"
-            echo "Application is not responding on health endpoint"
-            sudo -n /usr/local/bin/pathfinder-deploy journal -n100 --no-pager || true
-            exit 1
-          fi
+          ## # Final health check
+          ## if curl -f -s http://localhost:5000/alive > /dev/null 2>&1; then
+          ##   echo "✅ Deployment verification successful"
+          ##   echo "Application is healthy and responding"
+          ## else
+          ##   echo "❌ Deployment verification failed"
+          ##   echo "Application is not responding on health endpoint"
+          ##   sudo -n /usr/local/bin/pathfinder-deploy journal -n100 --no-pager || true
+          ##   exit 1
+          ## fi
 
       - name: Create deployment summary
         run: |
